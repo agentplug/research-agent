@@ -70,24 +70,29 @@ class BaseAgent(ABC):
     - Context management
     - Input validation
     - Universal solve() method interface
+    - Tool management
+    - Configuration management
     """
     
-    def __init__(self, llm_service=None, external_tools: Optional[List[str]] = None):
+    def __init__(self, llm_service=None, external_tools: Optional[List[str]] = None, config: Optional[Dict[str, Any]] = None):
         """
         Initialize base agent with common capabilities.
         
         Args:
             llm_service: LLM service instance
             external_tools: List of available external tools
+            config: Optional configuration dictionary
         """
         self.llm_service = llm_service
         self.external_tools = external_tools or []
+        self.config = config or {}
         self.context_manager = ContextManager()
         self.error_handler = ErrorHandler()
         self.agent_id = str(uuid.uuid4())
         self.created_at = datetime.now()
+        self.agent_type = self.__class__.__name__
         
-        logger.info(f"BaseAgent initialized with ID: {self.agent_id}")
+        logger.info(f"BaseAgent initialized: {self.agent_type} with ID: {self.agent_id}")
     
     @abstractmethod
     async def solve(self, question: str) -> Dict[str, Any]:
@@ -160,10 +165,60 @@ class BaseAgent(ABC):
         """Get agent information and status."""
         return {
             "agent_id": self.agent_id,
-            "agent_type": self.__class__.__name__,
+            "agent_type": self.agent_type,
             "created_at": self.created_at.isoformat(),
             "available_tools": self.get_available_tools(),
-            "context_keys": list(self.context_manager.get_context().keys()) if self.context_manager.get_context() else []
+            "context_keys": list(self.context_manager.get_context().keys()) if self.context_manager.get_context() else [],
+            "config_keys": list(self.config.keys()) if self.config else []
+        }
+    
+    def get_available_tools(self) -> List[str]:
+        """Get list of available external tools."""
+        return self.external_tools.copy()
+    
+    def add_tool(self, tool_name: str):
+        """Add a tool to available tools."""
+        if tool_name not in self.external_tools:
+            self.external_tools.append(tool_name)
+            logger.info(f"Added tool: {tool_name}")
+    
+    def remove_tool(self, tool_name: str):
+        """Remove a tool from available tools."""
+        if tool_name in self.external_tools:
+            self.external_tools.remove(tool_name)
+            logger.info(f"Removed tool: {tool_name}")
+    
+    def has_tool(self, tool_name: str) -> bool:
+        """Check if agent has access to a specific tool."""
+        return tool_name in self.external_tools
+    
+    def get_config(self, key: str = None, default: Any = None) -> Any:
+        """Get configuration value."""
+        if key is None:
+            return self.config.copy()
+        return self.config.get(key, default)
+    
+    def set_config(self, key: str, value: Any):
+        """Set configuration value."""
+        self.config[key] = value
+        logger.debug(f"Config set: {key}")
+    
+    def update_config(self, config_updates: Dict[str, Any]):
+        """Update multiple configuration values."""
+        self.config.update(config_updates)
+        logger.debug(f"Config updated with {len(config_updates)} keys")
+    
+    def get_health_status(self) -> Dict[str, Any]:
+        """Get agent health status."""
+        return {
+            "status": "healthy",
+            "agent_id": self.agent_id,
+            "agent_type": self.agent_type,
+            "uptime": (datetime.now() - self.created_at).total_seconds(),
+            "tools_count": len(self.external_tools),
+            "context_size": len(self.context_manager.get_context()),
+            "config_size": len(self.config),
+            "llm_service_available": self.llm_service is not None
         }
 ```
 
@@ -355,6 +410,9 @@ class ResearchAgent(BaseAgent):
         
         self.config = self._load_config()
         self.tool_context = tool_context or {}
+        
+        # Initialize LLM service for research agent
+        self.llm_service = get_shared_llm_service(agent_type="research")
         
     def _load_config(self) -> Dict[str, Any]:
         """Load basic configuration."""
@@ -654,22 +712,23 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 class MockLLMService:
-    """Mock LLM service for Phase 1 testing."""
+    """Mock LLM service for Phase 1 testing - Generic and reusable."""
     
-    def __init__(self):
+    def __init__(self, agent_type: str = "generic"):
         self.model = "mock-model"
         self.temperature = 0.1
         self.max_tokens = None
+        self.agent_type = agent_type
         
     def generate(self, 
                 prompt: str, 
                 system_prompt: Optional[str] = None,
                 temperature: Optional[float] = None,
                 max_tokens: Optional[int] = None) -> str:
-        """Generate mock response based on prompt."""
+        """Generate mock response based on prompt and agent type."""
         
-        # Determine research mode from system prompt
-        mode = "instant"
+        # Determine mode from system prompt or agent type
+        mode = "generic"
         if system_prompt:
             if "INSTANT" in system_prompt:
                 mode = "instant"
@@ -682,31 +741,31 @@ class MockLLMService:
         
         # Generate mode-specific mock response
         if mode == "instant":
-            return f"Mock instant research result: {prompt[:50]}..."
+            return f"Mock instant response for {self.agent_type}: {prompt[:50]}..."
         elif mode == "quick":
-            return f"Mock quick research result with enhanced context: {prompt[:50]}..."
+            return f"Mock quick response for {self.agent_type}: {prompt[:50]}..."
         elif mode == "standard":
-            return f"Mock standard research result with comprehensive analysis: {prompt[:50]}..."
+            return f"Mock standard response for {self.agent_type}: {prompt[:50]}..."
         elif mode == "deep":
-            return f"Mock deep research result with exhaustive analysis: {prompt[:50]}..."
+            return f"Mock deep response for {self.agent_type}: {prompt[:50]}..."
         else:
-            return f"Mock research result: {prompt[:50]}..."
+            return f"Mock {self.agent_type} response: {prompt[:50]}..."
     
-    def generate_research_analysis(self, question: str, data: List[Dict[str, Any]]) -> str:
-        """Generate mock research analysis."""
-        return f"Mock analysis for question: {question} with {len(data)} data points"
+    def generate_analysis(self, question: str, data: List[Dict[str, Any]]) -> str:
+        """Generate mock analysis from data."""
+        return f"Mock analysis for {self.agent_type}: {question} with {len(data)} data points"
     
-    def generate_clarification_questions(self, question: str) -> List[str]:
-        """Generate mock clarification questions."""
+    def generate_questions(self, topic: str, count: int = 3) -> List[str]:
+        """Generate mock questions for a topic."""
         return [
-            f"Mock clarification question 1 for: {question}",
-            f"Mock clarification question 2 for: {question}",
-            f"Mock clarification question 3 for: {question}"
-        ]
+            f"Mock question 1 for {self.agent_type}: {topic}",
+            f"Mock question 2 for {self.agent_type}: {topic}",
+            f"Mock question 3 for {self.agent_type}: {topic}"
+        ][:count]
     
-    def generate_follow_up_queries(self, question: str, gaps: List[str]) -> str:
-        """Generate mock follow-up queries."""
-        return f"Mock follow-up query for: {question} addressing gaps: {gaps}"
+    def generate_summary(self, content: str) -> str:
+        """Generate mock summary of content."""
+        return f"Mock summary for {self.agent_type}: {content[:100]}..."
     
     def is_local_model(self) -> bool:
         """Check if using local model."""
@@ -715,21 +774,35 @@ class MockLLMService:
     def get_current_model(self) -> str:
         """Get current model name."""
         return self.model
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get LLM service information."""
+        return {
+            "model": self.model,
+            "agent_type": self.agent_type,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "is_local": self.is_local_model()
+        }
 
 # Global shared instance
 _shared_llm_service: Optional[MockLLMService] = None
 
-def get_shared_llm_service() -> MockLLMService:
+def get_shared_llm_service(agent_type: str = "generic") -> MockLLMService:
     """Get shared LLM service instance."""
     global _shared_llm_service
     if _shared_llm_service is None:
-        _shared_llm_service = MockLLMService()
+        _shared_llm_service = MockLLMService(agent_type=agent_type)
     return _shared_llm_service
 
 def reset_shared_llm_service():
     """Reset shared LLM service instance."""
     global _shared_llm_service
     _shared_llm_service = None
+
+def create_llm_service(agent_type: str = "generic") -> MockLLMService:
+    """Create a new LLM service instance."""
+    return MockLLMService(agent_type=agent_type)
 ```
 
 ## Testing Strategy
@@ -1070,5 +1143,77 @@ class TestAgentHubIntegration:
 - **Preparation**: Mock LLM service ready for replacement with real LLM
 - **Foundation**: All method signatures and interfaces established with BaseAgent
 - **Testing**: AgentHub integration validated and working
+
+## Reusability Examples
+
+### **Example: Creating Other Agent Types**
+
+The BaseAgent and LLM service are designed to be reusable across different agent types:
+
+```python
+# Example: Coding Agent
+from src.base_agent import BaseAgent
+from llm_service import get_shared_llm_service
+
+class CodingAgent(BaseAgent):
+    """Coding agent using reusable BaseAgent and LLM service."""
+    
+    def __init__(self, tool_context=None):
+        super().__init__(external_tools=tool_context.get("available_tools", []) if tool_context else [])
+        self.llm_service = get_shared_llm_service(agent_type="coding")
+    
+    async def solve(self, question: str) -> Dict[str, Any]:
+        """Solve coding problems."""
+        try:
+            result = self.llm_service.generate(f"Coding question: {question}")
+            return self.format_response(result, {"agent_type": "coding"})
+        except Exception as e:
+            error_info = await self.handle_error(e, {"method": "solve", "question": question})
+            return self.format_response(f"Error: {str(e)}", {"error": error_info, "status": "error"})
+    
+    def generate_code(self, requirements: str) -> str:
+        """Generate code based on requirements."""
+        return self.llm_service.generate(f"Generate code for: {requirements}")
+
+# Example: Analysis Agent
+class AnalysisAgent(BaseAgent):
+    """Analysis agent using reusable BaseAgent and LLM service."""
+    
+    def __init__(self, tool_context=None):
+        super().__init__(external_tools=tool_context.get("available_tools", []) if tool_context else [])
+        self.llm_service = get_shared_llm_service(agent_type="analysis")
+    
+    async def solve(self, question: str) -> Dict[str, Any]:
+        """Solve analysis problems."""
+        try:
+            result = self.llm_service.generate(f"Analysis question: {question}")
+            return self.format_response(result, {"agent_type": "analysis"})
+        except Exception as e:
+            error_info = await self.handle_error(e, {"method": "solve", "question": question})
+            return self.format_response(f"Error: {str(e)}", {"error": error_info, "status": "error"})
+    
+    def analyze_data(self, data: List[Dict[str, Any]]) -> str:
+        """Analyze data using LLM service."""
+        return self.llm_service.generate_analysis("Analyze this data", data)
+```
+
+### **Key Reusability Features:**
+
+1. **BaseAgent provides common capabilities**:
+   - Error handling and logging
+   - Context management
+   - Tool management
+   - Configuration management
+   - Health status monitoring
+
+2. **LLM service is agent-type agnostic**:
+   - Generic methods (`generate`, `generate_analysis`, `generate_questions`)
+   - Agent-type aware responses
+   - Configurable for different use cases
+
+3. **Consistent interface**:
+   - All agents implement `solve()` method
+   - Standardized error handling
+   - Common response formatting
 
 This Phase 1 implementation provides a solid foundation for Phase 2, where we'll replace the mock LLM service with real LLM integration while maintaining the same interface and AgentHub compatibility.

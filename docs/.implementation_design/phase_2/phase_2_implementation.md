@@ -52,7 +52,7 @@ class ResearchAgent(BaseAgent):
         super().__init__(external_tools=tool_context.get("available_tools", []) if tool_context else [])
         
         self.config = self._load_config()
-        self.llm_service = get_shared_llm_service()
+        self.llm_service = get_shared_llm_service(agent_type="research")
         self.tool_context = tool_context or {}
         
         # Initialize temp file manager
