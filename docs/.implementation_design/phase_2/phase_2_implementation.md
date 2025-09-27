@@ -78,6 +78,61 @@ class ResearchAgent(BaseAgent):
             "tool_parameters": self.tool_context.get("tool_parameters", {}),
             "tool_return_types": self.tool_context.get("tool_return_types", {})
         }
+    
+    def _select_tools_for_research(self, question: str, mode: str) -> List[str]:
+        """Use LLM to intelligently select tools for research based on question and mode."""
+        try:
+            tools_info = self._get_available_tools_info()
+            available_tools = tools_info["available_tools"]
+            
+            if not available_tools:
+                return []
+            
+            # Create tool selection prompt
+            tool_descriptions = tools_info["tool_descriptions"]
+            tool_list = "\n".join([f"- {tool}: {desc}" for tool, desc in tool_descriptions.items()])
+            
+            selection_prompt = f"""
+Research question: {question}
+Research mode: {mode}
+
+Available tools:
+{tool_list}
+
+Based on the research question and mode, select the most appropriate tools to use. Consider:
+- For instant research: Select 1 tool that can provide quick, direct answers
+- For quick research: Select 1-2 tools that can provide enhanced context
+- For standard research: Select 2-3 tools that can provide comprehensive coverage
+- For deep research: Select all relevant tools for exhaustive research
+
+Return only the tool names separated by commas, no explanations.
+"""
+            
+            # Use LLM to select tools
+            selected_tools_response = self.llm_service.generate(
+                selection_prompt,
+                system_prompt="You are a tool selection expert. Analyze the research question and select the most appropriate tools.",
+                temperature=0.1
+            )
+            
+            # Parse the response to get tool names
+            selected_tools = []
+            for tool_name in available_tools:
+                if tool_name.lower() in selected_tools_response.lower():
+                    selected_tools.append(tool_name)
+            
+            # Fallback: if no tools selected, use first available tool
+            if not selected_tools:
+                selected_tools = [available_tools[0]]
+            
+            return selected_tools
+            
+        except Exception as e:
+            logger.error(f"Error in tool selection: {str(e)}")
+            # Fallback: return first available tool
+            tools_info = self._get_available_tools_info()
+            available_tools = tools_info["available_tools"]
+            return [available_tools[0]] if available_tools else []
         
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from config.json file."""
@@ -100,14 +155,22 @@ class ResearchAgent(BaseAgent):
             }
     
     def instant_research(self, question: str) -> str:
-        """Instant research mode - 1 round, quick response."""
+        """Instant research mode - 1 round, quick response using LLM-selected tools."""
         try:
-            # Instant research: Single round, direct answer
-            system_prompt = self.config["system_prompts"]["instant"]
+            # Use LLM to select appropriate tools for instant research
+            selected_tools = self._select_tools_for_research(question, "instant")
             
-            # Generate response using LLM
+            if not selected_tools:
+                return f"No tools available for research: {question}"
+            
+            # Use first selected tool for instant research
+            tool_name = selected_tools[0]
+            tool_result = self._call_tool(tool_name, {"query": question})
+            
+            # Generate response using LLM with tool results
+            system_prompt = self.config["system_prompts"]["instant"]
             response = self.llm_service.generate(
-                f"Research question: {question}\n\nProvide a quick, accurate answer focusing on key facts.",
+                f"Research question: {question}\n\nTool result from {tool_name}: {tool_result}\n\nProvide a quick, accurate answer focusing on key facts.",
                 system_prompt=system_prompt,
                 temperature=self.config["ai"]["temperature"]
             )
@@ -118,117 +181,91 @@ class ResearchAgent(BaseAgent):
             return f"Error in instant research: {str(e)}"
     
     def quick_research(self, question: str) -> str:
-        """Quick research mode - 2 rounds with analysis."""
+        """Quick research mode - 2 rounds with analysis using LLM-selected tools."""
         try:
-            # Quick research: Two rounds with analysis
+            # Use LLM to select appropriate tools for quick research
+            selected_tools = self._select_tools_for_research(question, "quick")
+            
+            if not selected_tools:
+                return f"No tools available for research: {question}"
+            
+            # Use selected tools for quick research (up to 2 tools)
+            tool_results = []
+            for tool_name in selected_tools[:2]:
+                tool_result = self._call_tool(tool_name, {"query": question})
+                tool_results.append(f"{tool_name}: {tool_result}")
+            
+            # Generate response using LLM with tool results
             system_prompt = self.config["system_prompts"]["quick"]
-            
-            # First round
-            round1_response = self.llm_service.generate(
-                f"Research question: {question}\n\nProvide initial research findings.",
+            response = self.llm_service.generate(
+                f"Research question: {question}\n\nTool results:\n" + "\n".join(tool_results) + "\n\nProvide enhanced analysis with additional context.",
                 system_prompt=system_prompt,
                 temperature=self.config["ai"]["temperature"]
             )
             
-            # Second round with analysis
-            round2_response = self.llm_service.generate(
-                f"Research question: {question}\n\nInitial findings: {round1_response}\n\nProvide enhanced analysis with additional context.",
-                system_prompt=system_prompt,
-                temperature=self.config["ai"]["temperature"]
-            )
-            
-            # Synthesize results
-            final_response = self.llm_service.generate(
-                f"Research question: {question}\n\nRound 1: {round1_response}\n\nRound 2: {round2_response}\n\nSynthesize into a comprehensive quick research response.",
-                system_prompt=system_prompt,
-                temperature=self.config["ai"]["temperature"]
-            )
-            
-            return final_response
+            return response
             
         except Exception as e:
             return f"Error in quick research: {str(e)}"
     
     def standard_research(self, question: str) -> str:
-        """Standard research mode - 5 rounds with comprehensive analysis."""
+        """Standard research mode - comprehensive analysis using LLM-selected tools."""
         try:
-            # Standard research: Multiple rounds with gap analysis
+            # Use LLM to select appropriate tools for standard research
+            selected_tools = self._select_tools_for_research(question, "standard")
+            
+            if not selected_tools:
+                return f"No tools available for research: {question}"
+            
+            # Use selected tools for standard research
+            tool_results = []
+            for tool_name in selected_tools:
+                tool_result = self._call_tool(tool_name, {"query": question})
+                tool_results.append(f"{tool_name}: {tool_result}")
+            
+            # Generate comprehensive analysis using LLM with tool results
             system_prompt = self.config["system_prompts"]["standard"]
-            
-            research_data = []
-            
-            # Execute multiple rounds
-            for round_num in range(1, 6):  # 5 rounds
-                round_response = self.llm_service.generate(
-                    f"Research question: {question}\n\nRound {round_num}: Provide research findings. Previous rounds: {research_data}",
-                    system_prompt=system_prompt,
-                    temperature=self.config["ai"]["temperature"]
-                )
-                
-                research_data.append(f"Round {round_num}: {round_response}")
-                
-                # Gap analysis between rounds
-                if round_num < 5:
-                    gap_analysis = self.llm_service.generate(
-                        f"Research question: {question}\n\nCurrent research data: {research_data}\n\nIdentify information gaps and suggest next research direction.",
-                        system_prompt=system_prompt,
-                        temperature=self.config["ai"]["temperature"]
-                    )
-                    research_data.append(f"Gap Analysis: {gap_analysis}")
-            
-            # Final synthesis
-            final_response = self.llm_service.generate(
-                f"Research question: {question}\n\nAll research rounds: {research_data}\n\nProvide comprehensive standard research response.",
+            response = self.llm_service.generate(
+                f"Research question: {question}\n\nTool results:\n" + "\n".join(tool_results) + "\n\nProvide comprehensive standard research response with thorough analysis.",
                 system_prompt=system_prompt,
                 temperature=self.config["ai"]["temperature"]
             )
             
-            return final_response
+            return response
             
         except Exception as e:
             return f"Error in standard research: {str(e)}"
     
     def deep_research(self, question: str) -> str:
-        """Deep research mode - 12 rounds with clarification and exhaustive analysis."""
+        """Deep research mode with clarification and exhaustive analysis using LLM-selected tools."""
         try:
-            # Deep research: Exhaustive analysis with clarification
+            # Use LLM to select appropriate tools for deep research
+            selected_tools = self._select_tools_for_research(question, "deep")
+            
+            if not selected_tools:
+                return f"No tools available for research: {question}"
+            
+            # Generate clarification questions using LLM
+            clarifications = self.llm_service.generate_questions(question, count=3)
+            
+            # Use selected tools for deep research
+            tool_results = []
+            for tool_name in selected_tools:
+                tool_result = self._call_tool(tool_name, {"query": question})
+                tool_results.append(f"{tool_name}: {tool_result}")
+            
+            # Generate comprehensive analysis using LLM with tool results and clarifications
             system_prompt = self.config["system_prompts"]["deep"]
-            
-            # Generate clarification questions
-            clarifications = self.llm_service.generate_clarification_questions(question)
-            
-            # Enhanced question with clarifications
-            enhanced_question = f"{question}\n\nClarification context: {', '.join(clarifications)}"
-            
-            research_data = []
-            
-            # Execute multiple rounds
-            for round_num in range(1, 13):  # 12 rounds
-                round_response = self.llm_service.generate(
-                    f"Enhanced research question: {enhanced_question}\n\nRound {round_num}: Provide detailed research findings. Previous rounds: {research_data}",
-                    system_prompt=system_prompt,
-                    temperature=self.config["ai"]["temperature"]
-                )
-                
-                research_data.append(f"Round {round_num}: {round_response}")
-                
-                # Deep gap analysis between rounds
-                if round_num < 12:
-                    gap_analysis = self.llm_service.generate(
-                        f"Enhanced research question: {enhanced_question}\n\nCurrent research data: {research_data}\n\nConduct deep gap analysis and identify missing information.",
-                        system_prompt=system_prompt,
-                        temperature=self.config["ai"]["temperature"]
-                    )
-                    research_data.append(f"Deep Gap Analysis: {gap_analysis}")
-            
-            # Final comprehensive synthesis
-            final_response = self.llm_service.generate(
-                f"Enhanced research question: {enhanced_question}\n\nAll research rounds: {research_data}\n\nProvide exhaustive deep research response with comprehensive analysis.",
+            analysis = self.llm_service.generate(
+                f"Research question: {question}\n\nClarification questions: {clarifications}\n\nTool results:\n" + "\n".join(tool_results) + "\n\nProvide exhaustive deep research response with comprehensive analysis.",
                 system_prompt=system_prompt,
                 temperature=self.config["ai"]["temperature"]
             )
             
-            return final_response
+            # Generate summary
+            summary = self.llm_service.generate_summary(analysis)
+            
+            return f"Deep research results:\n{analysis}\n\nSummary: {summary}\n\nClarification questions: {clarifications}"
             
         except Exception as e:
             return f"Error in deep research: {str(e)}"

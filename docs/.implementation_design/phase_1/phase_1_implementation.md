@@ -1227,28 +1227,72 @@ class ResearchAgent(BaseAgent):
         # In real implementation, this would interface with AgentHub's tool calling mechanism
         return f"Mock result from {tool_name} with parameters: {parameters}"
     
-    def _get_available_tools_info(self) -> Dict[str, Any]:
-        """Get detailed information about available tools."""
-        return {
-            "available_tools": self.get_available_tools(),
-            "tool_descriptions": self.tool_context.get("tool_descriptions", {}),
-            "tool_usage_examples": self.tool_context.get("tool_usage_examples", {}),
-            "tool_parameters": self.tool_context.get("tool_parameters", {}),
-            "tool_return_types": self.tool_context.get("tool_return_types", {})
-        }
-    
-    def instant_research(self, question: str) -> str:
-        """Instant research using available tools."""
+    def _select_tools_for_research(self, question: str, mode: str) -> List[str]:
+        """Use LLM to intelligently select tools for research based on question and mode."""
         try:
-            # Get available tools
             tools_info = self._get_available_tools_info()
             available_tools = tools_info["available_tools"]
             
             if not available_tools:
+                return []
+            
+            # Create tool selection prompt
+            tool_descriptions = tools_info["tool_descriptions"]
+            tool_list = "\n".join([f"- {tool}: {desc}" for tool, desc in tool_descriptions.items()])
+            
+            selection_prompt = f"""
+Research question: {question}
+Research mode: {mode}
+
+Available tools:
+{tool_list}
+
+Based on the research question and mode, select the most appropriate tools to use. Consider:
+- For instant research: Select 1 tool that can provide quick, direct answers
+- For quick research: Select 1-2 tools that can provide enhanced context
+- For standard research: Select 2-3 tools that can provide comprehensive coverage
+- For deep research: Select all relevant tools for exhaustive research
+
+Return only the tool names separated by commas, no explanations.
+"""
+            
+            # Use LLM to select tools
+            selected_tools_response = self.llm_service.generate(
+                selection_prompt,
+                system_prompt="You are a tool selection expert. Analyze the research question and select the most appropriate tools.",
+                temperature=0.1
+            )
+            
+            # Parse the response to get tool names
+            selected_tools = []
+            for tool_name in available_tools:
+                if tool_name.lower() in selected_tools_response.lower():
+                    selected_tools.append(tool_name)
+            
+            # Fallback: if no tools selected, use first available tool
+            if not selected_tools:
+                selected_tools = [available_tools[0]]
+            
+            return selected_tools
+            
+        except Exception as e:
+            logger.error(f"Error in tool selection: {str(e)}")
+            # Fallback: return first available tool
+            tools_info = self._get_available_tools_info()
+            available_tools = tools_info["available_tools"]
+            return [available_tools[0]] if available_tools else []
+    
+    def instant_research(self, question: str) -> str:
+        """Instant research using LLM-selected tools."""
+        try:
+            # Use LLM to select appropriate tools for instant research
+            selected_tools = self._select_tools_for_research(question, "instant")
+            
+            if not selected_tools:
                 return f"No tools available for research: {question}"
             
-            # Use first available tool for instant research
-            tool_name = available_tools[0]
+            # Use first selected tool for instant research
+            tool_name = selected_tools[0]
             result = self._call_tool(tool_name, {"query": question})
             
             return f"Instant research result using {tool_name}: {result}"
@@ -1257,17 +1301,17 @@ class ResearchAgent(BaseAgent):
             return f"Error in instant research: {str(e)}"
     
     def quick_research(self, question: str) -> str:
-        """Quick research using multiple tools."""
+        """Quick research using LLM-selected tools."""
         try:
-            tools_info = self._get_available_tools_info()
-            available_tools = tools_info["available_tools"]
+            # Use LLM to select appropriate tools for quick research
+            selected_tools = self._select_tools_for_research(question, "quick")
             
-            if not available_tools:
+            if not selected_tools:
                 return f"No tools available for research: {question}"
             
-            # Use up to 2 tools for quick research
+            # Use selected tools for quick research (up to 2 tools)
             results = []
-            for tool_name in available_tools[:2]:
+            for tool_name in selected_tools[:2]:
                 result = self._call_tool(tool_name, {"query": question})
                 results.append(f"{tool_name}: {result}")
             
@@ -1277,17 +1321,17 @@ class ResearchAgent(BaseAgent):
             return f"Error in quick research: {str(e)}"
     
     def standard_research(self, question: str) -> str:
-        """Standard research using multiple tools and analysis."""
+        """Standard research using LLM-selected tools and analysis."""
         try:
-            tools_info = self._get_available_tools_info()
-            available_tools = tools_info["available_tools"]
+            # Use LLM to select appropriate tools for standard research
+            selected_tools = self._select_tools_for_research(question, "standard")
             
-            if not available_tools:
+            if not selected_tools:
                 return f"No tools available for research: {question}"
             
-            # Use all available tools for standard research
+            # Use selected tools for standard research
             results = []
-            for tool_name in available_tools:
+            for tool_name in selected_tools:
                 result = self._call_tool(tool_name, {"query": question})
                 results.append(f"{tool_name}: {result}")
             
@@ -1300,20 +1344,20 @@ class ResearchAgent(BaseAgent):
             return f"Error in standard research: {str(e)}"
     
     def deep_research(self, question: str) -> str:
-        """Deep research with clarification questions."""
+        """Deep research with clarification questions using LLM-selected tools."""
         try:
-            tools_info = self._get_available_tools_info()
-            available_tools = tools_info["available_tools"]
+            # Use LLM to select appropriate tools for deep research
+            selected_tools = self._select_tools_for_research(question, "deep")
             
-            if not available_tools:
+            if not selected_tools:
                 return f"No tools available for research: {question}"
             
             # Generate clarification questions
             clarification_questions = self.llm_service.generate_questions(question, count=3)
             
-            # Use all available tools for deep research
+            # Use selected tools for deep research
             results = []
-            for tool_name in available_tools:
+            for tool_name in selected_tools:
                 result = self._call_tool(tool_name, {"query": question})
                 results.append(f"{tool_name}: {result}")
             
