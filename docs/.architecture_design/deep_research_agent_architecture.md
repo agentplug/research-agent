@@ -43,9 +43,9 @@ result = agent.solve("Give me a report about newest policy of the US about the H
 ```mermaid
 graph TB
     subgraph "External Systems"
-        AS["Academic Databases<br/>arXiv PubMed Google Scholar"]
+        AS["Academic Sources<br/>arXiv PubMed Google Scholar"]
         WS["Web Sources<br/>News Blogs Websites"]
-        SS["Specialized DBs<br/>Industry Reports Patents"]
+        SS["Specialized Sources<br/>Industry Reports Patents"]
         NS["News Sources<br/>Reuters AP BBC"]
     end
     
@@ -93,14 +93,14 @@ graph TB
         end
         
         subgraph "Integration Layer"
-            AI["Agent Interface<br/>External API Implementation"]
+            AI["Command-line Interface<br/>JSON Input/Output via Command Line"]
             TC["Team Communication<br/>Multi-agent Coordination"]
             CM["Context Manager<br/>Research Context Sharing"]
         end
         
         subgraph "Tool Ecosystem"
             ST["Search Tools<br/>Web Search, Academic Search, News Search"]
-            DT["Data Retrieval Tools<br/>Database Access, API Integration"]
+            DT["Data Retrieval Tools<br/>File Access, API Integration"]
             ET["External Tools<br/>User-configured external tools"]
             LLM["LLM Service<br/>AI Model Integration"]
         end
@@ -174,6 +174,7 @@ graph TB
     subgraph "Data Intelligence"
         QA["Data Quality Assessor<br/>Evaluate retrieved data quality"]
         VA["Gap Identifier<br/>Identify what information is missing"]
+        QG["Query Generator<br/>Generate queries for missing information"]
         BA["Success Criteria Evaluator<br/>Determine if research goals are met"]
         ST["Source Tracker<br/>Duplicate Prevention & Source Management"]
     end
@@ -184,14 +185,14 @@ graph TB
         RS["Decision Synthesizer<br/>Synthesize decisions for next research moves"]
     end
     
-        subgraph "Agent Interface"
-            AR["Agent Interface<br/>External interface implementation"]
+        subgraph "Command-line Interface"
+            AR["Command-line Handler<br/>Parse JSON input from command line"]
             JM["JSON Manager<br/>Input/output JSON handling"]
             EM["Error Manager<br/>Error handling and reporting"]
         end
     
     subgraph "Clarification System"
-        CG["Clarification Generator<br/>Generate clarification questions"]
+        CG["Clarification Generator<br/>LLM-powered question generation"]
         CH["Clarification Handler<br/>Process clarification responses"]
         SR["Strategy Refiner<br/>Adapt research strategy based on clarifications"]
     end
@@ -238,6 +239,8 @@ graph TB
     
     ST --> RE
     ST --> QA
+    VA --> QG
+    QG --> RE
 ```
 
 ## Research Mode Architecture
@@ -343,15 +346,13 @@ The research agent implements a progressive enhancement algorithm that adapts co
 
 ### Source Tracking Mechanism
 
-**Duplicate Prevention Strategy**:
-- **Source Registry**: Maintain unique identifiers for all accessed sources
-- **Content Hashing**: Generate content-based hashes to detect duplicates
-- **Domain Tracking**: Track sources by domain and URL patterns
-- **Query Association**: Associate sources with specific search queries
-- **Availability Checking**: Verify source availability before reuse
+**URL Tracking Strategy**:
+- **URL Registry**: Maintain list of scraped URLs to avoid re-scraping
+- **Simple URL Matching**: Check if URL has been previously accessed
+- **Efficient Lookup**: Fast URL lookup to prevent duplicate scraping
 
 **Source Selection Algorithm**:
-- **Availability Filter**: Filter out previously used sources
+- **URL Filter**: Filter out previously scraped URLs
 - **Relevance Scoring**: Score remaining sources by relevance to current query
 - **Diversity Optimization**: Ensure source diversity across domains and types
 - **Quality Thresholding**: Apply minimum quality thresholds for source selection
@@ -359,20 +360,21 @@ The research agent implements a progressive enhancement algorithm that adapts co
 ### Context-Aware Enhancement
 
 **Analysis Components**:
-- **Gap Identification**: Identify missing information in current results
-- **Contradiction Detection**: Detect conflicting information across sources
+- **Gap Identification**: Identify what information is lacking in current results
+- **Query Generation**: Produce appropriate queries to retrieve missing information
 - **Coverage Assessment**: Evaluate completeness of information coverage
 - **Quality Evaluation**: Assess reliability and credibility of sources
 
 **Enhancement Strategies**:
-- **Follow-up Queries**: Generate targeted queries based on identified gaps
+- **Follow-up Queries**: Generate targeted queries based on identified information gaps
 - **Source Diversification**: Expand search to different source types
 - **Depth Progression**: Increase search depth for complex topics
 - **Validation Searches**: Cross-reference information across multiple sources
 
 ### Clarification System (Deep Mode)
 
-**Clarification Generation**:
+**Clarification Generation (LLM-powered)**:
+- **LLM Analysis**: Use LLM to analyze query and identify clarification needs
 - **Scope Clarification**: Identify ambiguous scope requirements
 - **Depth Clarification**: Determine required detail level
 - **Domain Clarification**: Specify relevant domains or fields
@@ -384,6 +386,11 @@ The research agent implements a progressive enhancement algorithm that adapts co
 - **Direct User Interaction**: Handle user clarification requests
 - **Context Preservation**: Maintain clarification context across interactions
 - **Strategy Refinement**: Adapt research strategy based on clarifications
+
+**Output Layer**:
+- **Complete Data Return**: Return all retrieved data to output layer
+- **Source Attribution**: Include all sources used in research
+- **Research Trail**: Provide complete research history and methodology
 
 ## Data Flow Architecture
 
@@ -408,6 +415,8 @@ graph LR
         S["Sources<br/>Validated References"]
         I["Insights<br/>Key Findings and Analysis"]
         C2["Citations<br/>Formatted References"]
+        AD["All Retrieved Data<br/>Complete Research Data"]
+        RT["Research Trail<br/>Complete Research History"]
     end
     
     Q --> MS
@@ -423,6 +432,8 @@ graph LR
     RS --> S
     RS --> I
     RS --> C2
+    RS --> AD
+    RS --> RT
 ```
 
 
@@ -478,13 +489,13 @@ graph TB
         subgraph "External Framework"
             AHC["External Framework Core<br/>Agent Management"]
             AHI["External Interface<br/>Agent Integration"]
-            AHD["External Database<br/>Agent Metadata"]
+            AHD["External Storage<br/>Agent Metadata"]
         end
         
         subgraph "Deep Research Agent"
             DRA["Deep Research Agent<br/>Main Application"]
-            RDB["Research Database<br/>Findings Storage"]
-            CDB["Cache Database<br/>Performance Cache"]
+            RTF["Research Temp Files<br/>Findings Storage"]
+            CTF["Cache Temp Files<br/>Performance Cache"]
         end
         
         subgraph "External Services"
@@ -502,8 +513,8 @@ graph TB
     AHI --> DRA
     AHD --> AHC
     
-    DRA --> RDB
-    DRA --> CDB
+    DRA --> RTF
+    DRA --> CTF
     DRA --> LLM
     DRA --> API
     
@@ -518,7 +529,7 @@ graph TB
 - **asyncio**: Asynchronous programming for parallel processing
 - **aiohttp**: Asynchronous HTTP client for web requests
 - **pydantic**: Data validation and serialization
-- **sqlite3**: Local database for research data storage
+- **tempfile**: Temporary files for research data storage
 
 ### AI/ML Technologies
 - **aisuite**: LLM service integration
@@ -535,9 +546,30 @@ graph TB
 
 ### External Framework Integration
 - **Standard Agent Files**: `agent.py` and `agent.yaml` following framework conventions
-- **Agent Interface**: Core framework compatibility
+- **Command-line Interface**: JSON input/output via command line arguments
 - **JSON Communication**: Standardized input/output format
 - **Multi-Agent Support**: Compatible with team workflows
+
+### Command-line Interface Pattern
+The agent follows the standard AgentHub interface pattern:
+
+**Input Format** (via command line):
+```bash
+python agent.py '{"method": "instant_research", "parameters": {"question": "research question"}}'
+```
+
+**Output Format** (to stdout):
+```json
+{"result": "research results with sources and analysis"}
+```
+
+**Error Format** (to stdout):
+```json
+{"error": "error message"}
+```
+
+**Supported Methods**:
+- `instant_research`, `quick_research`, `standard_research`, `deep_research`, `solve`
 
 ### Core Research Methods
 - **`instant_research(question)`**: Query → Tools → Data → Answer (1 round, 10 sources, 15-30 sec)
@@ -547,11 +579,15 @@ graph TB
 - **`solve(question)`**: Universal solve method with auto mode selection
 
 ### Source Tracking & Duplicate Prevention
-- **Source Registry**: Maintains unique identifiers for all accessed sources
-- **Content Hashing**: Generates content-based hashes to detect duplicates
-- **Domain Tracking**: Tracks sources by domain and URL patterns
-- **Query Association**: Associates sources with specific search queries
-- **Availability Checking**: Verifies source availability before reuse
+- **URL Registry**: Maintains list of scraped URLs to avoid re-scraping
+- **Simple URL Matching**: Checks if URL has been previously accessed
+- **Efficient Lookup**: Fast URL lookup to prevent duplicate scraping
+
+### Temp File Management
+- **Research Data Storage**: Store retrieved data in temporary files
+- **Cache Management**: Use temp files for performance caching
+- **Automatic Cleanup**: Clean up temp files after research completion
+- **File Organization**: Organize temp files by research session and round
 
 ### Agent Configuration
 - **External Tools**: User can specify external tools when loading agent
@@ -586,7 +622,7 @@ result = agent.solve("Research question")
 **Repository Structure**: `agentplug/research-agent`
 - **`base_agent/`**: BaseAgent module with common agent capabilities
 - **`research_agent/`**: ResearchAgent module inheriting from BaseAgent
-- **`agent.py`**: Main agent implementation with AgentRunner interface
+- **`agent.py`**: Main agent implementation with command-line interface
 - **`agent.yaml`**: AgentHub configuration and metadata
 - **`pyproject.toml`**: Python package configuration
 - **`llm_service/`**: LLM service module integration
@@ -675,25 +711,6 @@ class ResearchAgent(BaseAgent):
 - **Easy Updates**: Updates to BaseAgent benefit all agents
 - **Clear Separation**: Domain logic separated from common infrastructure
 
-### Future Agent Examples
-```python
-# Future coding agent
-class CodingAgent(BaseAgent):
-    def solve(self, question):
-        return self._execute_coding_task(question)
-    
-    def generate_code(self, requirements):
-        pass
-
-# Future analysis agent  
-class AnalysisAgent(BaseAgent):
-    def solve(self, question):
-        return self._execute_analysis(question)
-    
-    def analyze_data(self, data):
-        pass
-```
-
 ### External Tool Integration
 - **Tool Discovery**: Agent automatically discovers available external tools
 - **Tool Selection**: Agent selects appropriate tools based on research needs
@@ -711,10 +728,10 @@ class AnalysisAgent(BaseAgent):
 - **Concurrent Users**: Support 100+ concurrent research sessions
 
 ### Scalability Requirements
-- **Horizontal Scaling**: Support multiple agent instances
-- **Load Balancing**: Distribute research load across instances
+- **Single Instance Performance**: Efficient handling of research requests
 - **Resource Management**: Efficient resource allocation and cleanup
-- **Database Scaling**: Support large research databases
+- **File Management**: Efficient temp file handling and cleanup
+- **Memory Optimization**: Clean state management between research sessions
 
 ### Reliability Requirements
 - **Availability**: 99.9% uptime
@@ -757,7 +774,7 @@ class AnalysisAgent(BaseAgent):
 
 ### ADR-004: External Framework Integration Strategy
 **Context**: Need seamless integration with external framework
-**Decision**: Implement standard agent interface with context-aware mode selection
+**Decision**: Implement command-line JSON interface with context-aware mode selection
 **Rationale**: Provides seamless integration while maintaining flexibility
 **Consequences**:
 - Pros: Seamless integration, flexible usage, maintainable
@@ -777,16 +794,17 @@ class AnalysisAgent(BaseAgent):
 - **Monitoring**: Real-time performance and quality monitoring
 - **Quality Controls**: Multiple validation and quality assessment layers
 
-### Business Risks
-- **User Adoption**: Risk of low user adoption
-- **Competition**: Risk of competitive solutions
-- **Scalability**: Risk of inability to scale with demand
-- **Cost**: Risk of high operational costs
+### Technical Risks
+- **External Service Dependencies**: Risk of external API failures
+- **Performance**: Risk of slow response times with large research tasks
+- **Resource Usage**: Risk of high memory/CPU usage during deep research
+- **Data Quality**: Risk of poor quality sources affecting research results
 
 ### Mitigation Strategies
-- **User Research**: Continuous user feedback and improvement
-- **Innovation**: Continuous feature development and improvement
-- **Architecture**: Scalable and efficient architecture design
+- **Error Handling**: Robust error handling and retry mechanisms
+- **Performance Optimization**: Efficient algorithms and resource management
+- **Quality Assurance**: Multiple validation layers and source verification
+- **Monitoring**: Real-time monitoring and alerting systems
 - **Cost Optimization**: Efficient resource usage and cost management
 
 ## Conclusion
