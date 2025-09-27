@@ -9,7 +9,313 @@
 
 ## Modules to Create/Modify
 
-### 1. **Root Level Files** (Create)
+### 1. **BaseAgent Module** (Create)
+
+#### `src/base_agent/` - Base Agent Foundation
+**Purpose**: Common agent capabilities shared across all agent types
+
+**Key Components**:
+- `BaseAgent` abstract base class
+- Context management and state handling
+- Error handling and logging
+- Common utility functions
+- Universal `solve()` method interface
+
+**Implementation Details**:
+```python
+# src/base_agent/__init__.py
+"""
+BaseAgent Module - Common agent capabilities
+"""
+
+from .core import BaseAgent
+from .context_manager import ContextManager
+from .error_handler import ErrorHandler
+from .utils import validate_input_data, format_response
+
+__all__ = [
+    "BaseAgent",
+    "ContextManager", 
+    "ErrorHandler",
+    "validate_input_data",
+    "format_response"
+]
+```
+
+```python
+# src/base_agent/core.py
+"""
+BaseAgent - Common agent capabilities for all agent types
+"""
+
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional, List
+import logging
+import uuid
+from datetime import datetime
+
+from .context_manager import ContextManager
+from .error_handler import ErrorHandler
+from .utils import validate_input_data, format_response
+
+logger = logging.getLogger(__name__)
+
+class BaseAgent(ABC):
+    """
+    Base agent class with common capabilities shared across all agents.
+    
+    This abstract base class provides:
+    - LLM service integration
+    - Error handling and logging
+    - Context management
+    - Input validation
+    - Universal solve() method interface
+    """
+    
+    def __init__(self, llm_service=None, external_tools: Optional[List[str]] = None):
+        """
+        Initialize base agent with common capabilities.
+        
+        Args:
+            llm_service: LLM service instance
+            external_tools: List of available external tools
+        """
+        self.llm_service = llm_service
+        self.external_tools = external_tools or []
+        self.context_manager = ContextManager()
+        self.error_handler = ErrorHandler()
+        self.agent_id = str(uuid.uuid4())
+        self.created_at = datetime.now()
+        
+        logger.info(f"BaseAgent initialized with ID: {self.agent_id}")
+    
+    @abstractmethod
+    async def solve(self, question: str) -> Dict[str, Any]:
+        """
+        Universal solve method - to be implemented by subclasses.
+        
+        Args:
+            question: Question or task to solve
+            
+        Returns:
+            Dictionary containing solution and metadata
+        """
+        pass
+    
+    def get_available_tools(self) -> List[str]:
+        """Get list of available external tools."""
+        return self.external_tools.copy()
+    
+    def validate_input(self, input_data: Dict[str, Any]) -> bool:
+        """
+        Validate input data using common validation rules.
+        
+        Args:
+            input_data: Input data to validate
+            
+        Returns:
+            True if input is valid, False otherwise
+        """
+        return validate_input_data(input_data)
+    
+    async def handle_error(self, error: Exception, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Handle errors with common error handling logic.
+        
+        Args:
+            error: Exception that occurred
+            context: Additional context about the error
+            
+        Returns:
+            Dictionary containing error information
+        """
+        return await self.error_handler.handle_error(error, context)
+    
+    def set_context(self, key: str, value: Any):
+        """Set context value for the agent."""
+        self.context_manager.set_context(key, value)
+    
+    def get_context(self, key: str = None) -> Any:
+        """Get context value from the agent."""
+        return self.context_manager.get_context(key)
+    
+    def clear_context(self):
+        """Clear all context data."""
+        self.context_manager.clear_context()
+    
+    def format_response(self, result: Any, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Format response using common formatting rules.
+        
+        Args:
+            result: Result data to format
+            metadata: Additional metadata
+            
+        Returns:
+            Formatted response dictionary
+        """
+        return format_response(result, metadata)
+    
+    def get_agent_info(self) -> Dict[str, Any]:
+        """Get agent information and status."""
+        return {
+            "agent_id": self.agent_id,
+            "agent_type": self.__class__.__name__,
+            "created_at": self.created_at.isoformat(),
+            "available_tools": self.get_available_tools(),
+            "context_keys": list(self.context_manager.get_context().keys()) if self.context_manager.get_context() else []
+        }
+```
+
+```python
+# src/base_agent/context_manager.py
+"""
+Context Manager for BaseAgent
+Manages agent context and state
+"""
+
+from typing import Dict, Any, Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+class ContextManager:
+    """Manages agent context and state."""
+    
+    def __init__(self):
+        self.context: Dict[str, Any] = {}
+        self.session_id: Optional[str] = None
+    
+    def set_context(self, key: str, value: Any):
+        """Set context value."""
+        self.context[key] = value
+        logger.debug(f"Context set: {key}")
+    
+    def get_context(self, key: str = None) -> Any:
+        """Get context value."""
+        if key is None:
+            return self.context.copy()
+        return self.context.get(key)
+    
+    def clear_context(self):
+        """Clear all context."""
+        self.context.clear()
+        logger.debug("Context cleared")
+```
+
+```python
+# src/base_agent/error_handler.py
+"""
+Error Handler for BaseAgent
+Provides common error handling and logging
+"""
+
+import logging
+from typing import Dict, Any, Optional
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+class ErrorHandler:
+    """Common error handling and logging for agents."""
+    
+    def __init__(self):
+        self.error_count = 0
+        self.error_types: Dict[str, int] = {}
+    
+    async def handle_error(self, error: Exception, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Handle error with common error handling logic.
+        
+        Args:
+            error: Exception that occurred
+            context: Additional context about the error
+            
+        Returns:
+            Dictionary containing error information
+        """
+        self.error_count += 1
+        error_type = type(error).__name__
+        self.error_types[error_type] = self.error_types.get(error_type, 0) + 1
+        
+        error_info = {
+            "error_type": error_type,
+            "error_message": str(error),
+            "timestamp": datetime.now().isoformat(),
+            "context": context or {},
+            "error_count": self.error_count
+        }
+        
+        logger.error(f"Error {self.error_count}: {error_type} - {str(error)}")
+        if context:
+            logger.debug(f"Error context: {context}")
+        
+        return error_info
+    
+    def get_error_stats(self) -> Dict[str, Any]:
+        """Get error statistics."""
+        return {
+            "total_errors": self.error_count,
+            "error_types": self.error_types
+        }
+```
+
+```python
+# src/base_agent/utils.py
+"""
+Utility functions for BaseAgent
+Common utility functions used across agents
+"""
+
+from typing import Dict, Any, Optional
+import json
+
+def validate_input_data(input_data: Dict[str, Any]) -> bool:
+    """
+    Validate input data using common validation rules.
+    
+    Args:
+        input_data: Input data to validate
+        
+    Returns:
+        True if input is valid, False otherwise
+    """
+    if not isinstance(input_data, dict):
+        return False
+    
+    # Check for required fields
+    if "method" not in input_data:
+        return False
+    
+    if "parameters" not in input_data:
+        return False
+    
+    return True
+
+def format_response(result: Any, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Format response using common formatting rules.
+    
+    Args:
+        result: Result data to format
+        metadata: Additional metadata
+        
+    Returns:
+        Formatted response dictionary
+    """
+    response = {
+        "result": result,
+        "timestamp": datetime.now().isoformat(),
+        "status": "success"
+    }
+    
+    if metadata:
+        response.update(metadata)
+    
+    return response
+```
+
+### 2. **Root Level Files** (Create)
 
 #### `agent.py` - Main Entry Point
 **Purpose**: AgentHub-compatible entry point with command-line interface
@@ -34,13 +340,19 @@ import os
 import logging
 from typing import Dict, Any, Optional
 
+# Import BaseAgent
+from src.base_agent import BaseAgent
+
 logger = logging.getLogger(__name__)
 
-class ResearchAgent:
+class ResearchAgent(BaseAgent):
     """Minimal research agent for Phase 1 testing."""
     
     def __init__(self, tool_context: Optional[Dict[str, Any]] = None):
         """Initialize with basic configuration."""
+        # Initialize BaseAgent
+        super().__init__(external_tools=tool_context.get("available_tools", []) if tool_context else [])
+        
         self.config = self._load_config()
         self.tool_context = tool_context or {}
         
@@ -73,9 +385,28 @@ class ResearchAgent:
         """Deep research mode - mock implementation."""
         return f"Mock deep research result for: {question}"
     
-    def solve(self, question: str) -> str:
+    async def solve(self, question: str) -> Dict[str, Any]:
         """Auto mode selection - mock implementation."""
-        return f"Mock solve result for: {question}"
+        try:
+            # Simple auto mode selection based on question length
+            if len(question) < 50:
+                result = self.instant_research(question)
+                mode = "instant"
+            elif len(question) < 100:
+                result = self.quick_research(question)
+                mode = "quick"
+            elif len(question) < 200:
+                result = self.standard_research(question)
+                mode = "standard"
+            else:
+                result = self.deep_research(question)
+                mode = "deep"
+            
+            return self.format_response(result, {"mode": mode, "auto_selected": True})
+            
+        except Exception as e:
+            error_info = await self.handle_error(e, {"method": "solve", "question": question})
+            return self.format_response(f"Error in solve: {str(e)}", {"error": error_info, "status": "error"})
 
 def main():
     """Main entry point for agent execution."""
@@ -100,12 +431,16 @@ def main():
         elif method == "deep_research":
             result = agent.deep_research(parameters.get("question", ""))
         elif method == "solve":
-            result = agent.solve(parameters.get("question", ""))
+            import asyncio
+            result = asyncio.run(agent.solve(parameters.get("question", "")))
         else:
             print(json.dumps({"error": f"Unknown method: {method}"}))
             sys.exit(1)
         
-        print(json.dumps({"result": result}))
+        if method == "solve":
+            print(json.dumps(result))
+        else:
+            print(json.dumps({"result": result}))
         
     except Exception as e:
         print(json.dumps({"error": str(e)}))
@@ -692,13 +1027,20 @@ class TestAgentHubIntegration:
 
 ### **Phase 1 Implementation Checklist:**
 
-- [ ] **Create `agent.py`** with complete command-line interface
+- [ ] **Create `src/base_agent/`** module with BaseAgent foundation
+- [ ] **Create `src/base_agent/__init__.py`** with module exports
+- [ ] **Create `src/base_agent/core.py`** with BaseAgent class
+- [ ] **Create `src/base_agent/context_manager.py`** with context management
+- [ ] **Create `src/base_agent/error_handler.py`** with error handling
+- [ ] **Create `src/base_agent/utils.py`** with utility functions
+- [ ] **Create `agent.py`** with ResearchAgent inheriting from BaseAgent
 - [ ] **Create `agent.yaml`** with full AgentHub configuration
 - [ ] **Create `pyproject.toml`** with Python package configuration
 - [ ] **Create `config.json`** with runtime configuration
 - [ ] **Create `llm_service.py`** with mock LLM service
 - [ ] **Create `test_phase1.py`** with unit tests
 - [ ] **Create `test_agenthub_integration.py`** with AgentHub tests
+- [ ] **Test BaseAgent** functionality and inheritance
 - [ ] **Test agent loading** in AgentHub
 - [ ] **Test all methods** return mock responses
 - [ ] **Test error handling** for invalid inputs
@@ -709,22 +1051,24 @@ class TestAgentHubIntegration:
 
 ### **Phase 1 Success Criteria:**
 
-1. ✅ **Agent loads successfully** in AgentHub
-2. ✅ **All 5 methods work** (instant_research, quick_research, standard_research, deep_research, solve)
-3. ✅ **Mock responses returned** for all methods
-4. ✅ **Error handling works** for invalid inputs
-5. ✅ **JSON input/output** format correct
-6. ✅ **Command-line interface** functional
-7. ✅ **Unit tests pass** for all functionality
-8. ✅ **AgentHub integration tests** pass
+1. ✅ **BaseAgent module** created and functional
+2. ✅ **ResearchAgent inherits** from BaseAgent correctly
+3. ✅ **Agent loads successfully** in AgentHub
+4. ✅ **All 5 methods work** (instant_research, quick_research, standard_research, deep_research, solve)
+5. ✅ **Mock responses returned** for all methods
+6. ✅ **Error handling works** for invalid inputs
+7. ✅ **JSON input/output** format correct
+8. ✅ **Command-line interface** functional
+9. ✅ **Unit tests pass** for all functionality
+10. ✅ **AgentHub integration tests** pass
 
 ## Next Phase Preparation
 
 ### **Phase 1 → Phase 2 Transition:**
 
-- **Dependency**: Basic agent structure working in AgentHub
+- **Dependency**: BaseAgent module and ResearchAgent inheritance working in AgentHub
 - **Preparation**: Mock LLM service ready for replacement with real LLM
-- **Foundation**: All method signatures and interfaces established
+- **Foundation**: All method signatures and interfaces established with BaseAgent
 - **Testing**: AgentHub integration validated and working
 
 This Phase 1 implementation provides a solid foundation for Phase 2, where we'll replace the mock LLM service with real LLM integration while maintaining the same interface and AgentHub compatibility.

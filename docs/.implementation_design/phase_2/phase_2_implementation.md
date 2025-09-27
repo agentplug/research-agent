@@ -37,16 +37,20 @@ import asyncio
 import tempfile
 from datetime import datetime
 
-# Import our LLM service
+# Import our modules
+from src.base_agent import BaseAgent
 from llm_service import CoreLLMService, get_shared_llm_service
 
 logger = logging.getLogger(__name__)
 
-class ResearchAgent:
+class ResearchAgent(BaseAgent):
     """Research agent with real LLM integration for Phase 2."""
     
     def __init__(self, tool_context: Optional[Dict[str, Any]] = None):
         """Initialize with real LLM service."""
+        # Initialize BaseAgent
+        super().__init__(external_tools=tool_context.get("available_tools", []) if tool_context else [])
+        
         self.config = self._load_config()
         self.llm_service = get_shared_llm_service()
         self.tool_context = tool_context or {}
@@ -209,7 +213,7 @@ class ResearchAgent:
         except Exception as e:
             return f"Error in deep research: {str(e)}"
     
-    def solve(self, question: str) -> str:
+    async def solve(self, question: str) -> Dict[str, Any]:
         """Auto mode selection based on question complexity."""
         try:
             # Auto-select mode based on question complexity
@@ -217,16 +221,23 @@ class ResearchAgent:
             question_complexity = self._analyze_question_complexity(question)
             
             if question_length < 50 and question_complexity < 3:
-                return self.instant_research(question)
+                result = self.instant_research(question)
+                mode = "instant"
             elif question_length < 100 and question_complexity < 5:
-                return self.quick_research(question)
+                result = self.quick_research(question)
+                mode = "quick"
             elif question_length < 200 and question_complexity < 8:
-                return self.standard_research(question)
+                result = self.standard_research(question)
+                mode = "standard"
             else:
-                return self.deep_research(question)
+                result = self.deep_research(question)
+                mode = "deep"
+            
+            return self.format_response(result, {"mode": mode, "auto_selected": True})
                 
         except Exception as e:
-            return f"Error in auto mode selection: {str(e)}"
+            error_info = await self.handle_error(e, {"method": "solve", "question": question})
+            return self.format_response(f"Error in auto mode selection: {str(e)}", {"error": error_info, "status": "error"})
     
     def _analyze_question_complexity(self, question: str) -> int:
         """Analyze question complexity for auto mode selection."""
@@ -280,12 +291,16 @@ def main():
         elif method == "deep_research":
             result = agent.deep_research(parameters.get("question", ""))
         elif method == "solve":
-            result = agent.solve(parameters.get("question", ""))
+            import asyncio
+            result = asyncio.run(agent.solve(parameters.get("question", "")))
         else:
             print(json.dumps({"error": f"Unknown method: {method}"}))
             sys.exit(1)
         
-        print(json.dumps({"result": result}))
+        if method == "solve":
+            print(json.dumps(result))
+        else:
+            print(json.dumps({"result": result}))
         
     except Exception as e:
         print(json.dumps({"error": str(e)}))
