@@ -1227,16 +1227,71 @@ class ResearchAgent(BaseAgent):
         # In real implementation, this would interface with AgentHub's tool calling mechanism
         return f"Mock result from {tool_name} with parameters: {parameters}"
     
-    def _select_tools_for_research(self, question: str, mode: str) -> List[str]:
-        """Use LLM to intelligently select tools for research based on question and mode."""
+    def _execute_dynamic_research(self, question: str, mode: str) -> str:
+        """Execute dynamic research with iterative tool selection based on results."""
         try:
             tools_info = self._get_available_tools_info()
             available_tools = tools_info["available_tools"]
             
             if not available_tools:
-                return []
+                return f"No tools available for research: {question}"
             
-            # Create tool selection prompt
+            # Initialize research state
+            research_data = []
+            used_tools = set()
+            max_iterations = self._get_max_iterations_for_mode(mode)
+            
+            # Initial tool selection
+            initial_tools = self._select_initial_tools(question, mode, available_tools)
+            
+            for iteration in range(max_iterations):
+                # Select tools for this iteration
+                if iteration == 0:
+                    # First iteration: use initial tools
+                    tools_to_use = initial_tools
+                else:
+                    # Subsequent iterations: LLM decides if more tools are needed
+                    tools_to_use = self._select_additional_tools(
+                        question, mode, research_data, available_tools, used_tools
+                    )
+                
+                if not tools_to_use:
+                    break  # No more tools needed
+                
+                # Execute tools for this iteration
+                iteration_results = []
+                for tool_name in tools_to_use:
+                    if tool_name not in used_tools:
+                        tool_result = self._call_tool(tool_name, {"query": question})
+                        iteration_results.append(f"{tool_name}: {tool_result}")
+                        used_tools.add(tool_name)
+                
+                if iteration_results:
+                    research_data.extend(iteration_results)
+                
+                # Check if research is complete
+                if self._is_research_complete(question, research_data, mode):
+                    break
+            
+            # Generate final response
+            return self._generate_final_response(question, research_data, mode)
+            
+        except Exception as e:
+            return f"Error in dynamic research: {str(e)}"
+    
+    def _get_max_iterations_for_mode(self, mode: str) -> int:
+        """Get maximum iterations based on research mode."""
+        return {
+            "instant": 1,
+            "quick": 2,
+            "standard": 3,
+            "deep": 5
+        }.get(mode, 2)
+    
+    def _select_initial_tools(self, question: str, mode: str, available_tools: List[str]) -> List[str]:
+        """Select initial tools for the first iteration."""
+        try:
+            tools_info = self._get_available_tools_info()
             tool_descriptions = tools_info["tool_descriptions"]
             tool_list = "\n".join([f"- {tool}: {desc}" for tool, desc in tool_descriptions.items()])
             
@@ -1247,19 +1302,18 @@ Research mode: {mode}
 Available tools:
 {tool_list}
 
-Based on the research question and mode, select the most appropriate tools to use. Consider:
+Select the initial tools to start research. Consider:
 - For instant research: Select 1 tool that can provide quick, direct answers
-- For quick research: Select 1-2 tools that can provide enhanced context
-- For standard research: Select 2-3 tools that can provide comprehensive coverage
-- For deep research: Select all relevant tools for exhaustive research
+- For quick research: Select 1-2 tools that can provide good initial coverage
+- For standard research: Select 2-3 tools that can provide comprehensive initial coverage
+- For deep research: Select 3-4 tools that can provide thorough initial coverage
 
 Return only the tool names separated by commas, no explanations.
 """
             
-            # Use LLM to select tools
             selected_tools_response = self.llm_service.generate(
                 selection_prompt,
-                system_prompt="You are a tool selection expert. Analyze the research question and select the most appropriate tools.",
+                system_prompt="You are a tool selection expert. Select the best initial tools for research.",
                 temperature=0.1
             )
             
@@ -1276,97 +1330,140 @@ Return only the tool names separated by commas, no explanations.
             return selected_tools
             
         except Exception as e:
-            logger.error(f"Error in tool selection: {str(e)}")
-            # Fallback: return first available tool
-            tools_info = self._get_available_tools_info()
-            available_tools = tools_info["available_tools"]
+            logger.error(f"Error in initial tool selection: {str(e)}")
             return [available_tools[0]] if available_tools else []
     
-    def instant_research(self, question: str) -> str:
-        """Instant research using LLM-selected tools."""
+    def _select_additional_tools(self, question: str, mode: str, research_data: List[str], 
+                               available_tools: List[str], used_tools: set) -> List[str]:
+        """Use LLM to decide if additional tools are needed based on current research data."""
         try:
-            # Use LLM to select appropriate tools for instant research
-            selected_tools = self._select_tools_for_research(question, "instant")
+            tools_info = self._get_available_tools_info()
+            tool_descriptions = tools_info["tool_descriptions"]
             
-            if not selected_tools:
-                return f"No tools available for research: {question}"
+            # Get unused tools
+            unused_tools = [tool for tool in available_tools if tool not in used_tools]
+            if not unused_tools:
+                return []  # No more tools available
             
-            # Use first selected tool for instant research
-            tool_name = selected_tools[0]
-            result = self._call_tool(tool_name, {"query": question})
+            tool_list = "\n".join([f"- {tool}: {desc}" for tool, desc in tool_descriptions.items() 
+                                 if tool in unused_tools])
             
-            return f"Instant research result using {tool_name}: {result}"
+            decision_prompt = f"""
+Research question: {question}
+Research mode: {mode}
+
+Current research data:
+{chr(10).join(research_data)}
+
+Available unused tools:
+{tool_list}
+
+Based on the current research data, decide if additional tools are needed to complete the research. Consider:
+- Are there information gaps that other tools could fill?
+- Would additional tools provide different perspectives or data sources?
+- Is the current data sufficient for the research mode?
+
+If additional tools are needed, return the tool names separated by commas.
+If no additional tools are needed, return "NONE".
+"""
             
+            decision_response = self.llm_service.generate(
+                decision_prompt,
+                system_prompt="You are a research coordinator. Decide if additional tools are needed based on current research data.",
+                temperature=0.1
+            )
+            
+            if "NONE" in decision_response.upper():
+                return []
+            
+            # Parse the response to get tool names
+            selected_tools = []
+            for tool_name in unused_tools:
+                if tool_name.lower() in decision_response.lower():
+                    selected_tools.append(tool_name)
+            
+            return selected_tools
+            
+        except Exception as e:
+            logger.error(f"Error in additional tool selection: {str(e)}")
+            return []
+    
+    def _is_research_complete(self, question: str, research_data: List[str], mode: str) -> bool:
+        """Use LLM to determine if research is complete based on current data."""
+        try:
+            completion_prompt = f"""
+Research question: {question}
+Research mode: {mode}
+
+Current research data:
+{chr(10).join(research_data)}
+
+Based on the research mode and current data, determine if the research is complete:
+- For instant research: Is there a quick, direct answer available?
+- For quick research: Is there sufficient context for enhanced analysis?
+- For standard research: Is there comprehensive coverage of the topic?
+- For deep research: Is there exhaustive analysis with full context?
+
+Answer with "YES" if research is complete, "NO" if more research is needed.
+"""
+            
+            completion_response = self.llm_service.generate(
+                completion_prompt,
+                system_prompt="You are a research completion evaluator. Determine if research objectives are met.",
+                temperature=0.1
+            )
+            
+            return "YES" in completion_response.upper()
+            
+        except Exception as e:
+            logger.error(f"Error in research completion check: {str(e)}")
+            return True  # Default to complete to avoid infinite loops
+    
+    def _generate_final_response(self, question: str, research_data: List[str], mode: str) -> str:
+        """Generate final response based on research data and mode."""
+        try:
+            if mode == "deep":
+                # Generate clarification questions for deep research
+                clarifications = self.llm_service.generate_questions(question, count=3)
+                
+                # Generate comprehensive analysis
+                analysis = self.llm_service.generate_analysis(question, research_data)
+                summary = self.llm_service.generate_summary(analysis)
+                
+                return f"Deep research results:\n" + "\n".join(research_data) + f"\n\nAnalysis: {analysis}\n\nSummary: {summary}\n\nClarification questions: {clarifications}"
+            else:
+                # Generate response for other modes
+                analysis = self.llm_service.generate_analysis(question, research_data)
+                return f"{mode.title()} research results:\n" + "\n".join(research_data) + f"\n\nAnalysis: {analysis}"
+                
+        except Exception as e:
+            return f"Error generating final response: {str(e)}"
+    
+    def instant_research(self, question: str) -> str:
+        """Instant research mode - dynamic tool selection for quick response."""
+        try:
+            return self._execute_dynamic_research(question, "instant")
         except Exception as e:
             return f"Error in instant research: {str(e)}"
     
     def quick_research(self, question: str) -> str:
-        """Quick research using LLM-selected tools."""
+        """Quick research mode - dynamic tool selection with enhanced analysis."""
         try:
-            # Use LLM to select appropriate tools for quick research
-            selected_tools = self._select_tools_for_research(question, "quick")
-            
-            if not selected_tools:
-                return f"No tools available for research: {question}"
-            
-            # Use selected tools for quick research (up to 2 tools)
-            results = []
-            for tool_name in selected_tools[:2]:
-                result = self._call_tool(tool_name, {"query": question})
-                results.append(f"{tool_name}: {result}")
-            
-            return f"Quick research results:\n" + "\n".join(results)
-            
+            return self._execute_dynamic_research(question, "quick")
         except Exception as e:
             return f"Error in quick research: {str(e)}"
     
     def standard_research(self, question: str) -> str:
-        """Standard research using LLM-selected tools and analysis."""
+        """Standard research mode - dynamic tool selection with comprehensive analysis."""
         try:
-            # Use LLM to select appropriate tools for standard research
-            selected_tools = self._select_tools_for_research(question, "standard")
-            
-            if not selected_tools:
-                return f"No tools available for research: {question}"
-            
-            # Use selected tools for standard research
-            results = []
-            for tool_name in selected_tools:
-                result = self._call_tool(tool_name, {"query": question})
-                results.append(f"{tool_name}: {result}")
-            
-            # Generate analysis using LLM
-            analysis = self.llm_service.generate_analysis(question, results)
-            
-            return f"Standard research results:\n" + "\n".join(results) + f"\n\nAnalysis: {analysis}"
-            
+            return self._execute_dynamic_research(question, "standard")
         except Exception as e:
             return f"Error in standard research: {str(e)}"
     
     def deep_research(self, question: str) -> str:
-        """Deep research with clarification questions using LLM-selected tools."""
+        """Deep research mode - dynamic tool selection with exhaustive analysis."""
         try:
-            # Use LLM to select appropriate tools for deep research
-            selected_tools = self._select_tools_for_research(question, "deep")
-            
-            if not selected_tools:
-                return f"No tools available for research: {question}"
-            
-            # Generate clarification questions
-            clarification_questions = self.llm_service.generate_questions(question, count=3)
-            
-            # Use selected tools for deep research
-            results = []
-            for tool_name in selected_tools:
-                result = self._call_tool(tool_name, {"query": question})
-                results.append(f"{tool_name}: {result}")
-            
-            # Generate comprehensive analysis
-            analysis = self.llm_service.generate_analysis(question, results)
-            summary = self.llm_service.generate_summary(analysis)
-            
-            return f"Deep research results:\n" + "\n".join(results) + f"\n\nAnalysis: {analysis}\n\nSummary: {summary}\n\nClarification questions: {clarification_questions}"
-            
+            return self._execute_dynamic_research(question, "deep")
         except Exception as e:
             return f"Error in deep research: {str(e)}"
 ```
