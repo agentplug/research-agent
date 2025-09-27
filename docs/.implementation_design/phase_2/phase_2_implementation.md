@@ -55,9 +55,29 @@ class ResearchAgent(BaseAgent):
         self.llm_service = get_shared_llm_service(agent_type="research")
         self.tool_context = tool_context or {}
         
-        # Initialize temp file manager
-        self.temp_dir = tempfile.mkdtemp(prefix="research_agent_")
-        self.session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    def _call_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Any:
+        """Call an external tool with parameters."""
+        if not self.has_tool(tool_name):
+            raise ValueError(f"Tool '{tool_name}' not available")
+        
+        # Get tool information from context
+        tool_info = self.tool_context.get("tool_descriptions", {}).get(tool_name)
+        if not tool_info:
+            raise ValueError(f"Tool '{tool_name}' not found in tool context")
+        
+        # Example tool calling logic (this would be implemented based on AgentHub's tool system)
+        # In real implementation, this would interface with AgentHub's tool calling mechanism
+        return f"Real LLM result from {tool_name} with parameters: {parameters}"
+    
+    def _get_available_tools_info(self) -> Dict[str, Any]:
+        """Get detailed information about available tools."""
+        return {
+            "available_tools": self.get_available_tools(),
+            "tool_descriptions": self.tool_context.get("tool_descriptions", {}),
+            "tool_usage_examples": self.tool_context.get("tool_usage_examples", {}),
+            "tool_parameters": self.tool_context.get("tool_parameters", {}),
+            "tool_return_types": self.tool_context.get("tool_return_types", {})
+        }
         
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from config.json file."""
@@ -902,3 +922,144 @@ class TestAgentHubPhase2:
 - **Testing**: Real AI responses validated and working
 
 This Phase 2 implementation provides real LLM integration while maintaining AgentHub compatibility, setting the foundation for Phase 3 where we'll add external tool integration.
+
+## Tool Usage Documentation
+
+### **How to Use External Tools with ResearchAgent**
+
+The ResearchAgent in Phase 2 provides comprehensive tool management capabilities for working with external tools provided by AgentHub:
+
+```python
+# Example usage with tools
+agent = ResearchAgent(tool_context={
+    "available_tools": ["web_search", "document_retrieval", "academic_search"],
+    "tool_descriptions": {
+        "web_search": "Search the web for information",
+        "document_retrieval": "Retrieve documents from various sources",
+        "academic_search": "Search academic databases and papers"
+    },
+    "tool_usage_examples": {
+        "web_search": "web_search(query='latest AI developments')",
+        "document_retrieval": "document_retrieval(source='pdf', query='machine learning')",
+        "academic_search": "academic_search(database='arxiv', query='neural networks')"
+    },
+    "tool_parameters": {
+        "web_search": {
+            "query": {"name": "query", "type": "string", "required": True, "default": None},
+            "max_results": {"name": "max_results", "type": "integer", "required": False, "default": 10}
+        }
+    },
+    "tool_return_types": {
+        "web_search": "List[Dict[str, Any]]",
+        "document_retrieval": "List[Dict[str, Any]]",
+        "academic_search": "List[Dict[str, Any]]"
+    }
+})
+
+# Check available tools
+print(agent.get_available_tools())  # ['web_search', 'document_retrieval', 'academic_search']
+
+# Check if specific tool is available
+if agent.has_tool("web_search"):
+    print("Web search tool is available")
+
+# Get detailed tool information
+tools_info = agent._get_available_tools_info()
+print(tools_info["tool_descriptions"]["web_search"])  # "Search the web for information"
+
+# Call a tool (mock implementation in Phase 2)
+result = agent._call_tool("web_search", {"query": "AI developments"})
+print(result)  # "Real LLM result from web_search with parameters: {'query': 'AI developments'}"
+```
+
+### **Tool Integration in Research Methods**
+
+The research methods in Phase 2 can be enhanced to use external tools:
+
+```python
+def enhanced_instant_research(self, question: str) -> str:
+    """Enhanced instant research using external tools."""
+    try:
+        # Get available tools
+        tools_info = self._get_available_tools_info()
+        available_tools = tools_info["available_tools"]
+        
+        if not available_tools:
+            return f"No tools available for research: {question}"
+        
+        # Use first available tool for instant research
+        tool_name = available_tools[0]
+        tool_result = self._call_tool(tool_name, {"query": question})
+        
+        # Generate response using real LLM with tool results
+        system_prompt = self.config["system_prompts"]["instant"]
+        response = self.llm_service.generate(
+            f"Question: {question}\nTool Result: {tool_result}",
+            system_prompt=system_prompt
+        )
+        
+        return response
+        
+    except Exception as e:
+        return f"Error in enhanced instant research: {str(e)}"
+```
+
+### **Tool Context Structure**
+
+The `tool_context` parameter contains comprehensive tool information:
+
+```python
+tool_context = {
+    "available_tools": ["web_search", "document_retrieval", "academic_search"],
+    "tool_descriptions": {
+        "web_search": "Search the web for information",
+        "document_retrieval": "Retrieve documents from various sources",
+        "academic_search": "Search academic databases and papers"
+    },
+    "tool_usage_examples": {
+        "web_search": "web_search(query='latest AI developments')",
+        "document_retrieval": "document_retrieval(source='pdf', query='machine learning')",
+        "academic_search": "academic_search(database='arxiv', query='neural networks')"
+    },
+    "tool_parameters": {
+        "web_search": {
+            "query": {"name": "query", "type": "string", "required": True, "default": None},
+            "max_results": {"name": "max_results", "type": "integer", "required": False, "default": 10}
+        },
+        "document_retrieval": {
+            "source": {"name": "source", "type": "string", "required": True, "default": None},
+            "query": {"name": "query", "type": "string", "required": True, "default": None}
+        }
+    },
+    "tool_return_types": {
+        "web_search": "List[Dict[str, Any]]",
+        "document_retrieval": "List[Dict[str, Any]]",
+        "academic_search": "List[Dict[str, Any]]"
+    },
+    "tool_namespaces": {
+        "web_search": "mcp",
+        "document_retrieval": "mcp",
+        "academic_search": "mcp"
+    }
+}
+```
+
+### **Tool Management Methods**
+
+```python
+# Check if tool is available
+if agent.has_tool("web_search"):
+    result = agent._call_tool("web_search", {"query": "AI news"})
+
+# Add tool dynamically
+agent.add_tool("new_tool")
+
+# Remove tool
+agent.remove_tool("old_tool")
+
+# Get all available tools
+tools = agent.get_available_tools()
+
+# Get detailed tool information
+tools_info = agent._get_available_tools_info()
+```

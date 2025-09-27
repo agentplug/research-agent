@@ -1197,6 +1197,196 @@ class AnalysisAgent(BaseAgent):
         return self.llm_service.generate_analysis("Analyze this data", data)
 ```
 
+### **Tool Usage Documentation**
+
+#### **How to Use External Tools with BaseAgent**
+
+The BaseAgent provides comprehensive tool management capabilities for working with external tools provided by AgentHub:
+
+```python
+from src.base_agent import BaseAgent
+from llm_service import get_shared_llm_service
+
+class ResearchAgent(BaseAgent):
+    def __init__(self, tool_context=None):
+        super().__init__(external_tools=tool_context.get("available_tools", []) if tool_context else [])
+        self.tool_context = tool_context or {}
+        self.llm_service = get_shared_llm_service(agent_type="research")
+    
+    def _call_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Any:
+        """Call an external tool with parameters."""
+        if not self.has_tool(tool_name):
+            raise ValueError(f"Tool '{tool_name}' not available")
+        
+        # Get tool information from context
+        tool_info = self.tool_context.get("tool_descriptions", {}).get(tool_name)
+        if not tool_info:
+            raise ValueError(f"Tool '{tool_name}' not found in tool context")
+        
+        # Example tool calling logic (this would be implemented based on AgentHub's tool system)
+        # In real implementation, this would interface with AgentHub's tool calling mechanism
+        return f"Mock result from {tool_name} with parameters: {parameters}"
+    
+    def _get_available_tools_info(self) -> Dict[str, Any]:
+        """Get detailed information about available tools."""
+        return {
+            "available_tools": self.get_available_tools(),
+            "tool_descriptions": self.tool_context.get("tool_descriptions", {}),
+            "tool_usage_examples": self.tool_context.get("tool_usage_examples", {}),
+            "tool_parameters": self.tool_context.get("tool_parameters", {}),
+            "tool_return_types": self.tool_context.get("tool_return_types", {})
+        }
+    
+    def instant_research(self, question: str) -> str:
+        """Instant research using available tools."""
+        try:
+            # Get available tools
+            tools_info = self._get_available_tools_info()
+            available_tools = tools_info["available_tools"]
+            
+            if not available_tools:
+                return f"No tools available for research: {question}"
+            
+            # Use first available tool for instant research
+            tool_name = available_tools[0]
+            result = self._call_tool(tool_name, {"query": question})
+            
+            return f"Instant research result using {tool_name}: {result}"
+            
+        except Exception as e:
+            return f"Error in instant research: {str(e)}"
+    
+    def quick_research(self, question: str) -> str:
+        """Quick research using multiple tools."""
+        try:
+            tools_info = self._get_available_tools_info()
+            available_tools = tools_info["available_tools"]
+            
+            if not available_tools:
+                return f"No tools available for research: {question}"
+            
+            # Use up to 2 tools for quick research
+            results = []
+            for tool_name in available_tools[:2]:
+                result = self._call_tool(tool_name, {"query": question})
+                results.append(f"{tool_name}: {result}")
+            
+            return f"Quick research results:\n" + "\n".join(results)
+            
+        except Exception as e:
+            return f"Error in quick research: {str(e)}"
+    
+    def standard_research(self, question: str) -> str:
+        """Standard research using multiple tools and analysis."""
+        try:
+            tools_info = self._get_available_tools_info()
+            available_tools = tools_info["available_tools"]
+            
+            if not available_tools:
+                return f"No tools available for research: {question}"
+            
+            # Use all available tools for standard research
+            results = []
+            for tool_name in available_tools:
+                result = self._call_tool(tool_name, {"query": question})
+                results.append(f"{tool_name}: {result}")
+            
+            # Generate analysis using LLM
+            analysis = self.llm_service.generate_analysis(question, results)
+            
+            return f"Standard research results:\n" + "\n".join(results) + f"\n\nAnalysis: {analysis}"
+            
+        except Exception as e:
+            return f"Error in standard research: {str(e)}"
+    
+    def deep_research(self, question: str) -> str:
+        """Deep research with clarification questions."""
+        try:
+            tools_info = self._get_available_tools_info()
+            available_tools = tools_info["available_tools"]
+            
+            if not available_tools:
+                return f"No tools available for research: {question}"
+            
+            # Generate clarification questions
+            clarification_questions = self.llm_service.generate_questions(question, count=3)
+            
+            # Use all available tools for deep research
+            results = []
+            for tool_name in available_tools:
+                result = self._call_tool(tool_name, {"query": question})
+                results.append(f"{tool_name}: {result}")
+            
+            # Generate comprehensive analysis
+            analysis = self.llm_service.generate_analysis(question, results)
+            summary = self.llm_service.generate_summary(analysis)
+            
+            return f"Deep research results:\n" + "\n".join(results) + f"\n\nAnalysis: {analysis}\n\nSummary: {summary}\n\nClarification questions: {clarification_questions}"
+            
+        except Exception as e:
+            return f"Error in deep research: {str(e)}"
+```
+
+#### **Tool Context Structure**
+
+The `tool_context` parameter contains comprehensive tool information:
+
+```python
+tool_context = {
+    "available_tools": ["web_search", "document_retrieval", "academic_search"],
+    "tool_descriptions": {
+        "web_search": "Search the web for information",
+        "document_retrieval": "Retrieve documents from various sources",
+        "academic_search": "Search academic databases and papers"
+    },
+    "tool_usage_examples": {
+        "web_search": "web_search(query='latest AI developments')",
+        "document_retrieval": "document_retrieval(source='pdf', query='machine learning')",
+        "academic_search": "academic_search(database='arxiv', query='neural networks')"
+    },
+    "tool_parameters": {
+        "web_search": {
+            "query": {"name": "query", "type": "string", "required": True, "default": None},
+            "max_results": {"name": "max_results", "type": "integer", "required": False, "default": 10}
+        },
+        "document_retrieval": {
+            "source": {"name": "source", "type": "string", "required": True, "default": None},
+            "query": {"name": "query", "type": "string", "required": True, "default": None}
+        }
+    },
+    "tool_return_types": {
+        "web_search": "List[Dict[str, Any]]",
+        "document_retrieval": "List[Dict[str, Any]]",
+        "academic_search": "List[Dict[str, Any]]"
+    },
+    "tool_namespaces": {
+        "web_search": "mcp",
+        "document_retrieval": "mcp",
+        "academic_search": "mcp"
+    }
+}
+```
+
+#### **Tool Management Methods**
+
+```python
+# Check if tool is available
+if agent.has_tool("web_search"):
+    result = agent._call_tool("web_search", {"query": "AI news"})
+
+# Add tool dynamically
+agent.add_tool("new_tool")
+
+# Remove tool
+agent.remove_tool("old_tool")
+
+# Get all available tools
+tools = agent.get_available_tools()
+
+# Get detailed tool information
+tools_info = agent._get_available_tools_info()
+```
+
 ### **Key Reusability Features:**
 
 1. **BaseAgent provides common capabilities**:
@@ -1215,5 +1405,11 @@ class AnalysisAgent(BaseAgent):
    - All agents implement `solve()` method
    - Standardized error handling
    - Common response formatting
+
+4. **Comprehensive tool integration**:
+   - Dynamic tool management
+   - Tool context parsing
+   - Error handling for tool calls
+   - Tool information retrieval
 
 This Phase 1 implementation provides a solid foundation for Phase 2, where we'll replace the mock LLM service with real LLM integration while maintaining the same interface and AgentHub compatibility.
