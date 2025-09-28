@@ -96,6 +96,192 @@ src/research_agent/
 - Tool selection tests
 - Error handling tests
 
+## User Testing & Expectations - Phase 1 Foundation
+
+### ✅ What You Should Be Able to Test
+
+#### 1. ResearchAgent Initialization
+```python
+from research_agent import ResearchAgent
+
+# Test basic initialization
+agent = ResearchAgent(external_tools=["web_search", "academic_search"])
+assert agent.agent_type == "research"
+assert agent.has_tool("web_search") == True
+assert agent.has_tool("academic_search") == True
+```
+
+#### 2. All Research Methods
+```python
+# Test instant research
+result = agent.instant_research("What is artificial intelligence?")
+assert "Instant research result" in result
+assert "web_search" in result or "academic_search" in result
+
+# Test quick research
+result = agent.quick_research("What is machine learning?")
+assert "Quick research result" in result
+assert "Analysis:" in result
+
+# Test standard research
+result = agent.standard_research("What is deep learning?")
+assert "Standard research result" in result
+assert "Analysis:" in result
+
+# Test deep research
+result = agent.deep_research("What is neural networks?")
+assert "Deep research result" in result
+assert "Analysis:" in result
+assert "Summary:" in result
+assert "Clarification questions:" in result
+```
+
+#### 3. Auto Mode Selection
+```python
+import asyncio
+
+# Test solve method
+result = asyncio.run(agent.solve("What is AI?"))
+assert "mode" in result
+assert "result" in result
+assert result["mode"] in ["instant", "quick", "standard", "deep"]
+assert len(result["result"]) > 0
+```
+
+#### 4. Dynamic Research Process
+```python
+# Test dynamic research execution
+result = agent._execute_dynamic_research("What is AI?", "instant")
+assert "Mock result" in result
+assert len(result) > 0
+```
+
+#### 5. Tool Selection
+```python
+# Test tool selection logic
+tools = agent._select_tools_for_round("What is AI?", "instant", [], ["web_search", "academic_search"], 0)
+assert len(tools) > 0
+assert tools[0] in ["web_search", "academic_search"]
+```
+
+### ✅ What You Should Expect
+
+#### 1. Working Research Methods
+- **Instant Research**: Quick response using 1 tool, returns mock results
+- **Quick Research**: Enhanced analysis using 1-2 tools, includes analysis
+- **Standard Research**: Comprehensive analysis using 2-3 tools, includes analysis
+- **Deep Research**: Exhaustive analysis using multiple tools, includes analysis, summary, and clarification questions
+- **Error Handling**: Graceful handling of invalid inputs and tool failures
+
+#### 2. Dynamic Research Process
+- **Round-Based Execution**: Research executes in multiple rounds
+- **Context-Aware Tool Selection**: Tools selected based on current research progress
+- **Progress Analysis**: LLM analyzes what has been done and what's missing
+- **Completion Evaluation**: LLM determines when research is complete
+- **Follow-Up Queries**: Specific queries generated for each tool
+
+#### 3. Mock LLM Integration
+- **Mock Responses**: All LLM calls return appropriate mock responses
+- **Tool Selection**: Mock LLM selects tools based on context
+- **Analysis**: Mock LLM provides analysis of research progress
+- **Completion**: Mock LLM evaluates research completion
+- **Query Generation**: Mock LLM generates follow-up queries
+
+#### 4. AgentHub Compatibility
+- **Interface**: ResearchAgent can be used by AgentHub
+- **Tool Context**: External tool context is handled correctly
+- **Configuration**: Runtime configuration management works
+- **Health Monitoring**: Status and information are available
+
+### ✅ Manual Testing Commands
+
+#### Test Research Methods via AgentHub Interface
+```bash
+# Test instant research
+python agent.py '{"method": "instant_research", "parameters": {"question": "What is artificial intelligence?"}}'
+
+# Test quick research
+python agent.py '{"method": "quick_research", "parameters": {"question": "What is machine learning?"}}'
+
+# Test standard research
+python agent.py '{"method": "standard_research", "parameters": {"question": "What is deep learning?"}}'
+
+# Test deep research
+python agent.py '{"method": "deep_research", "parameters": {"question": "What is neural networks?"}}'
+
+# Test solve method
+python agent.py '{"method": "solve", "parameters": {"question": "What is AI?"}}'
+```
+
+#### Expected Output Format
+```json
+{
+  "result": "Instant research result using web_search: Mock result from web_search with parameters: {'query': 'What is artificial intelligence?'}"
+}
+```
+
+#### Test ResearchAgent Directly
+```python
+# Create test script: test_research_agent.py
+from research_agent import ResearchAgent
+import asyncio
+
+def test_research_agent():
+    # Test initialization
+    agent = ResearchAgent(external_tools=["web_search", "academic_search"])
+    print(f"✓ Agent initialized: {agent.agent_type}")
+    print(f"✓ Tools available: {agent.has_tool('web_search')}")
+    
+    # Test instant research
+    result = agent.instant_research("What is AI?")
+    print(f"✓ Instant research: {result[:50]}...")
+    
+    # Test quick research
+    result = agent.quick_research("What is ML?")
+    print(f"✓ Quick research: {result[:50]}...")
+    
+    # Test standard research
+    result = agent.standard_research("What is DL?")
+    print(f"✓ Standard research: {result[:50]}...")
+    
+    # Test deep research
+    result = agent.deep_research("What is NN?")
+    print(f"✓ Deep research: {result[:50]}...")
+    
+    # Test solve method
+    result = asyncio.run(agent.solve("What is AI?"))
+    print(f"✓ Solve method: mode={result['mode']}")
+
+if __name__ == "__main__":
+    test_research_agent()
+```
+
+#### Expected Output
+```
+✓ Agent initialized: research
+✓ Tools available: True
+✓ Instant research: Instant research result using web_search: Mock result...
+✓ Quick research: Quick research result using web_search: Mock result...
+✓ Standard research: Standard research result using web_search: Mock result...
+✓ Deep research: Deep research result using web_search: Mock result...
+✓ Solve method: mode=instant
+```
+
+### ✅ Success Criteria Checklist
+
+- [ ] ResearchAgent initializes correctly with external tools
+- [ ] All 4 research methods work and return appropriate mock responses
+- [ ] solve() method auto-selects appropriate mode and returns structured result
+- [ ] Dynamic research execution works with mock LLM
+- [ ] Tool selection logic functions correctly based on context
+- [ ] Progress analysis and completion evaluation work
+- [ ] Follow-up query generation works
+- [ ] Error handling works for various scenarios
+- [ ] All tests pass
+- [ ] Module integrates properly with BaseAgent
+- [ ] AgentHub interface compliance works
+- [ ] Performance is acceptable for Phase 1 requirements
+
 ## Dependencies
 - BaseAgent module
 - LLM Service module

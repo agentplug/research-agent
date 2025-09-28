@@ -137,6 +137,179 @@ def _generate_final_response(self, question: str, research_data: List[str], mode
         return response
 ```
 
+## User Testing & Expectations - Phase 2 Real LLM
+
+### ✅ What You Should Be Able to Test
+
+#### 1. Real LLM Integration
+```python
+from research_agent import ResearchAgent
+
+# Test with real LLM service
+agent = ResearchAgent(external_tools=["web_search", "academic_search"])
+assert agent.llm_service.model != "mock-model"  # Should use real model
+assert agent.agent_type == "research"
+```
+
+#### 2. Real Research Methods
+```python
+# Test instant research with real LLM
+result = agent.instant_research("What is artificial intelligence?")
+assert "Mock result" not in result  # Should not contain mock responses
+assert len(result) > 100  # Should be substantial real response
+assert "artificial intelligence" in result.lower() or "AI" in result
+
+# Test quick research with real LLM
+result = agent.quick_research("What is machine learning?")
+assert "Mock result" not in result
+assert "Analysis:" in result or "analysis" in result.lower()
+assert len(result) > 200  # Should be more comprehensive
+
+# Test standard research with real LLM
+result = agent.standard_research("What is deep learning?")
+assert "Mock result" not in result
+assert len(result) > 300  # Should be comprehensive
+
+# Test deep research with real LLM
+result = agent.deep_research("What is neural networks?")
+assert "Mock result" not in result
+assert "Clarification questions:" in result or "questions" in result.lower()
+assert len(result) > 500  # Should be exhaustive
+```
+
+#### 3. Real Tool Selection
+```python
+# Test real tool selection
+tools = agent._select_tools_for_round("What is AI?", "instant", [], ["web_search", "academic_search"], 0)
+assert len(tools) > 0
+assert tools[0] in ["web_search", "academic_search"]
+
+# Test independent tool selection
+analysis = "Need more information about AI applications"
+tools = agent._select_tools_independently("What is AI?", "standard", [], ["web_search", "academic_search"], analysis)
+assert len(tools) > 0
+```
+
+#### 4. Real Analysis and Completion
+```python
+# Test real analysis
+research_data = ["web_search: AI is artificial intelligence", "academic_search: AI research papers"]
+analysis_response = agent.llm_service.generate(
+    "Analyze this research data: " + "\n".join(research_data),
+    "You are a research analyst"
+)
+assert "Mock" not in analysis_response
+assert len(analysis_response) > 50
+```
+
+### ✅ What You Should Expect
+
+#### 1. Real LLM Responses
+- **No Mock Responses**: All responses should be from real LLM providers
+- **Substantial Content**: Responses should be meaningful and substantial
+- **Context Awareness**: LLM should understand the research context
+- **Quality Analysis**: Analysis should be insightful and relevant
+- **Proper Completion**: Completion evaluation should be accurate
+
+#### 2. Real Tool Selection
+- **Intelligent Selection**: Tools selected based on real analysis
+- **Context Awareness**: Selection considers current research progress
+- **Gap Identification**: Identifies real information gaps
+- **Follow-Up Queries**: Generates specific, targeted queries
+
+#### 3. Real Research Workflow
+- **Dynamic Execution**: Research adapts based on real progress
+- **Multi-Round Process**: Multiple rounds with real analysis
+- **Tool Effectiveness**: Tools selected based on effectiveness
+- **Completion Logic**: Real completion evaluation
+
+#### 4. Provider Integration
+- **Multiple Providers**: Works with OpenAI, Anthropic, Google, Local models
+- **Model Detection**: Automatically selects best available model
+- **Error Handling**: Graceful handling of provider errors
+- **Rate Limiting**: Proper handling of API rate limits
+
+### ✅ Manual Testing Commands
+
+#### Test Real Research Methods
+```bash
+# Test instant research with real LLM
+python agent.py '{"method": "instant_research", "parameters": {"question": "What is artificial intelligence?"}}'
+
+# Test quick research with real LLM
+python agent.py '{"method": "quick_research", "parameters": {"question": "What is machine learning?"}}'
+
+# Test standard research with real LLM
+python agent.py '{"method": "standard_research", "parameters": {"question": "What is deep learning?"}}'
+
+# Test deep research with real LLM
+python agent.py '{"method": "deep_research", "parameters": {"question": "What is neural networks?"}}'
+
+# Test solve method with real LLM
+python agent.py '{"method": "solve", "parameters": {"question": "What is AI?"}}'
+```
+
+#### Expected Output Format
+```json
+{
+  "result": "Artificial intelligence (AI) refers to the simulation of human intelligence in machines that are programmed to think and learn like humans. The term may also be applied to any machine that exhibits traits associated with a human mind such as learning and problem-solving..."
+}
+```
+
+#### Test Real LLM Service
+```python
+# Create test script: test_real_llm.py
+from llm_service import CoreLLMService, get_shared_llm_service
+
+def test_real_llm():
+    # Test real LLM service
+    service = CoreLLMService(agent_type="research")
+    print(f"✓ Service model: {service.model}")
+    
+    # Test real response generation
+    response = service.generate("What is artificial intelligence?", "You are a helpful assistant")
+    print(f"✓ Real response: {response[:100]}...")
+    
+    # Test real analysis
+    analysis = service.generate_analysis("What is AI?", ["AI is artificial intelligence"])
+    print(f"✓ Real analysis: {analysis[:100]}...")
+    
+    # Test real summary
+    summary = service.generate_summary("Long text about artificial intelligence")
+    print(f"✓ Real summary: {summary[:100]}...")
+    
+    # Test real questions
+    questions = service.generate_questions("What is AI?", count=3)
+    print(f"✓ Real questions: {questions[:100]}...")
+
+if __name__ == "__main__":
+    test_real_llm()
+```
+
+#### Expected Output
+```
+✓ Service model: gpt-4
+✓ Real response: Artificial intelligence (AI) refers to the simulation of human intelligence in machines...
+✓ Real analysis: Based on the provided information about AI, I can analyze that artificial intelligence...
+✓ Real summary: This text discusses artificial intelligence, covering its definition, applications...
+✓ Real questions: 1. What are the main applications of artificial intelligence? 2. How does AI differ from traditional programming? 3. What are the ethical considerations in AI development?
+```
+
+### ✅ Success Criteria Checklist
+
+- [ ] Real LLM service integration works correctly
+- [ ] All research methods return real LLM responses (no mock responses)
+- [ ] Tool selection uses real LLM analysis
+- [ ] Progress analysis and completion evaluation work with real LLM
+- [ ] Follow-up query generation works with real LLM
+- [ ] Multiple LLM providers work (OpenAI, Anthropic, Google, Local)
+- [ ] Model detection and fallback mechanisms work
+- [ ] Error handling works for provider failures
+- [ ] Rate limiting and timeout handling work
+- [ ] All tests pass with real LLM integration
+- [ ] Performance is acceptable with real LLM calls
+- [ ] AgentHub interface works with real LLM
+
 ## Testing
 - Real LLM integration tests
 - Tool selection tests with real LLM
