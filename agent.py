@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from research_agent.base_agent.error_handler import ErrorHandler
-from research_agent.research_agent.core import ResearchAgent
+from research_agent.research_agent.core_enhanced import ResearchAgent
 from research_agent.utils.utils import format_response
 
 
@@ -144,14 +144,14 @@ class ResearchAgentHub:
         self, query: str, context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Conduct deep research.
+        Conduct deep research with clarification support.
 
         Args:
             query: Research query
-            context: Additional context
+            context: Additional context including user_clarification
 
         Returns:
-            Research results
+            Research results or clarification questions
         """
         if not self.agent:
             if not self.initialize_agent():
@@ -159,7 +159,12 @@ class ResearchAgentHub:
                     success=False, message="Failed to initialize agent"
                 )
 
-        return self.agent.deep_research(query)
+        # Extract user clarification from context
+        user_clarification = ""
+        if context and "user_clarification" in context:
+            user_clarification = context["user_clarification"]
+
+        return self.agent.deep_research(query, user_clarification)
 
     def solve(
         self,
