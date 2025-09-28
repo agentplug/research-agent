@@ -76,7 +76,7 @@ class ResearchAgent(BaseAgent):
         """Execute a follow-up round with gap analysis."""
         research_summary = "\n".join(
             [
-                f"Round {r['round']}: {r['query']}\n{r['content']}..."
+                f"Round {r['round']}:\nTried Query: {r['query']}\nReceived Answer: {r['content']}..."
                 for r in previous_results
             ]
         )
@@ -137,9 +137,6 @@ Return your analysis as valid JSON:
 
             # Generate follow-up content with improved context
             followup_system_prompt = f"""Build upon the previous research to address specific gaps.
-
-Previous Research Context:
-{research_summary}
 
 Identified Gaps: {analysis.get('gaps_identified', [])}
 
