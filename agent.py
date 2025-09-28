@@ -93,10 +93,11 @@ class ResearchAgentHub:
             Research results
         """
         if not self.agent:
-            return format_response(
-                success=False,
-                message="Agent not initialized"
-            )
+            if not self.initialize_agent():
+                return format_response(
+                    success=False,
+                    message="Failed to initialize agent"
+                )
         
         request = {
             'method': 'instant_research',
@@ -118,10 +119,11 @@ class ResearchAgentHub:
             Research results
         """
         if not self.agent:
-            return format_response(
-                success=False,
-                message="Agent not initialized"
-            )
+            if not self.initialize_agent():
+                return format_response(
+                    success=False,
+                    message="Failed to initialize agent"
+                )
         
         request = {
             'method': 'quick_research',
@@ -143,10 +145,11 @@ class ResearchAgentHub:
             Research results
         """
         if not self.agent:
-            return format_response(
-                success=False,
-                message="Agent not initialized"
-            )
+            if not self.initialize_agent():
+                return format_response(
+                    success=False,
+                    message="Failed to initialize agent"
+                )
         
         request = {
             'method': 'standard_research',
@@ -168,10 +171,11 @@ class ResearchAgentHub:
             Research results
         """
         if not self.agent:
-            return format_response(
-                success=False,
-                message="Agent not initialized"
-            )
+            if not self.initialize_agent():
+                return format_response(
+                    success=False,
+                    message="Failed to initialize agent"
+                )
         
         request = {
             'method': 'deep_research',
