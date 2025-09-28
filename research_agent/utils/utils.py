@@ -279,6 +279,16 @@ def is_valid_url(url: str) -> bool:
     return bool(url_pattern.match(url))
 
 
+def get_current_timestamp() -> str:
+    """
+    Get current timestamp in ISO format.
+    
+    Returns:
+        Current timestamp as ISO string
+    """
+    return datetime.utcnow().isoformat()
+
+
 def normalize_whitespace(text: str) -> str:
     """
     Normalize whitespace in text.

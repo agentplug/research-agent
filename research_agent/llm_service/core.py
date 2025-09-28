@@ -1,5 +1,5 @@
 """
-Core LLM Service - Enhanced with AISuite Integration
+Core LLM Service - AISuite Integration
 
 This module provides the core LLM service interface with real LLM providers
 using AISuite for unified provider access.
@@ -11,7 +11,6 @@ from typing import Dict, Any, Optional, List
 from .client_manager import ClientManager
 from .model_detector import ModelDetector
 from .model_config import ModelInfo
-from .mock_service import MockLLMService
 from ..base_agent.error_handler import ErrorHandler
 from ..utils.utils import format_response
 
@@ -23,12 +22,12 @@ _shared_llm_service: Optional["LLMService"] = None
 
 class LLMService:
     """
-    Enhanced LLM service with AgentHub-inspired architecture.
+    LLM service with AISuite integration for real provider access.
     
     Features:
     - AISuite integration for unified provider access
     - Automatic model detection and selection
-    - Multi-provider support with intelligent fallback
+    - Multi-provider support (Ollama, LM Studio, OpenAI, Anthropic, etc.)
     - Shared instance management
     - Research mode-specific optimization
     """
@@ -61,10 +60,7 @@ class LLMService:
         # Initialize client
         self.client = self.client_manager.initialize_client(self.model)
         
-        # Keep mock service as ultimate fallback
-        self.mock_service = MockLLMService(config)
-        
-        self.service_type = "real"  # Now using real providers
+        self.service_type = "real"
         self.initialized = True
     
     def generate_response(
@@ -152,14 +148,23 @@ class LLMService:
                         )
                     else:
                         logger.error(f"Invalid response format: {response}")
-                        return self._fallback_to_mock(query, mode)
+                        return format_response(
+                            success=False,
+                            message="Invalid response format from LLM provider"
+                        )
                         
                 except Exception as e:
                     logger.error(f"AISuite generation failed: {e}")
-                    return self._fallback_to_mock(query, mode)
+                    return format_response(
+                        success=False,
+                        message=f"LLM generation failed: {str(e)}"
+                    )
             else:
-                logger.warning("No AISuite client available, using mock service")
-                return self._fallback_to_mock(query, mode)
+                logger.error("No AISuite client available")
+                return format_response(
+                    success=False,
+                    message="No LLM client available"
+                )
                 
         except Exception as e:
             return self.error_handler.handle_error(
@@ -204,11 +209,6 @@ class LLMService:
             return model.split(":")[0]
         return "unknown"
     
-    def _fallback_to_mock(self, query: str, mode: str) -> Dict[str, Any]:
-        """Fallback to mock service when real LLM fails."""
-        logger.warning(f"Falling back to mock service for {mode} research")
-        return self.mock_service.generate_response(query=query, mode=mode)
-    
     def get_available_models(self) -> List[Dict[str, Any]]:
         """Get all available models."""
         try:
@@ -226,7 +226,6 @@ class LLMService:
             'provider': self._get_provider_name(self.model),
             'is_local': self.model_detector.is_local_model(self.model),
             'client_available': self.client is not None,
-            'mock_fallback_available': True,
             'initialized': self.initialized
         }
     
