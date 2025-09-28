@@ -157,15 +157,14 @@ tests/
 
 ## CI/CD Pipeline
 
-The project uses GitHub Actions for continuous integration:
+The project uses pre-commit hooks for code quality and consistency:
 
-### Workflows
+### Local Development
 
-- **CI Pipeline** (`.github/workflows/ci.yml`):
-  - Runs on Python 3.8, 3.9, 3.10, 3.11
-  - Pre-commit hooks
-  - Unit tests with coverage
-  - Security scanning
+- **Pre-commit hooks**: Run automatically on every commit
+- **Code formatting**: Black and isort
+- **File validation**: Basic checks for consistency
+- **Security scanning**: Can be enabled with bandit
 
 ### Local CI Simulation
 
