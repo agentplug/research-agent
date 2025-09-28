@@ -81,42 +81,95 @@ class ResearchAgent(BaseAgent):
             ]
         )
 
-        analysis_prompt = f"""Analyze research results and identify gaps.
+        analysis_prompt = f"""You are a research analyst conducting gap analysis. Your task is to evaluate whether the research has fully answered the original query and identify what's missing.
 
-Original Query: {original_query}
-Previous Research:
+ORIGINAL QUERY: {original_query}
+
+PREVIOUS RESEARCH RESULTS:
 {research_summary}
 
-IMPORTANT: Only mark goal_reached as true if the research COMPLETELY answers the original query with no gaps or missing information.
+ANALYSIS INSTRUCTIONS:
+1. Compare the research results against the original query requirements
+2. Identify specific gaps, missing information, or unanswered aspects
+3. Determine if the research comprehensively addresses ALL aspects of the original query
+4. If gaps exist, formulate a precise follow-up query that targets the missing information
 
-Return JSON: {{"analysis": "analysis of the research results", "goal_reached": True/False, "next_query": "specific follow-up query"}}"""
+GOAL COMPLETION CRITERIA:
+- Mark goal_reached as TRUE only if the research provides complete, comprehensive answers to ALL aspects of the original query
+- Consider depth, accuracy, completeness, and relevance
+- Ensure no important sub-questions or aspects are left unaddressed
+
+NEXT QUERY GUIDELINES:
+- Be specific and targeted to fill identified gaps
+- Avoid repeating previous queries
+- Focus on missing information, not general exploration
+- Make the query actionable and precise
+
+Return your analysis as valid JSON:
+{{
+    "analysis": "Detailed analysis of research completeness, identifying specific gaps and strengths",
+    "goal_reached": true/false,
+    "reasoning": "Explanation of why goal is/isn't reached based on completeness criteria",
+    "gaps_identified": ["list", "of", "specific", "gaps", "or", "missing", "information"],
+    "next_query": "Precise follow-up query targeting the most critical gap, or null if goal reached"
+}}"""
 
         analysis_response = self.llm_service.generate(
             input_data=analysis_prompt,
-            system_prompt="You are a research analyst specializing in gap analysis.",
+            system_prompt="You are a research analyst specializing in gap analysis and research completeness evaluation.",
             temperature=0.0,
             return_json=True,
         )
 
         try:
             analysis = json.loads(analysis_response)
-            if analysis.get("goal_reached", False) or not analysis.get("next_query"):
+
+            # Check if goal is reached or no next query provided
+            goal_reached = analysis.get("goal_reached", False)
+            next_query = analysis.get("next_query")
+
+            if (
+                goal_reached
+                or not next_query
+                or next_query.lower() in ["null", "none", ""]
+            ):
                 return None
 
+            # Generate follow-up content with improved context
+            followup_system_prompt = f"""Build upon the previous research to address specific gaps.
+
+Previous Research Context:
+{research_summary}
+
+Identified Gaps: {analysis.get('gaps_identified', [])}
+
+Focus on: {next_query}
+
+Provide comprehensive information that fills the identified gaps while building upon previous findings."""
+
             followup_content = self.llm_service.generate(
-                input_data=analysis["next_query"],
-                system_prompt="Build upon previous research and address specific gaps.",
+                input_data=next_query,
+                system_prompt=followup_system_prompt,
                 temperature=0.0,
             )
 
             return {
                 "round": len(previous_results) + 1,
-                "query": analysis["next_query"],
+                "query": next_query,
                 "content": followup_content,
                 "timestamp": get_current_timestamp(),
+                "analysis": analysis.get("analysis", ""),
+                "gaps_targeted": analysis.get("gaps_identified", []),
             }
 
-        except Exception:
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            # Log the error for debugging but don't fail the research
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Failed to parse analysis response: {e}. Response: {analysis_response[:200]}..."
+            )
             return None
 
     def instant_research(self, query: str) -> Dict[str, Any]:
