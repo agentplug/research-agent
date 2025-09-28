@@ -137,8 +137,8 @@ class ResearchAgent(BaseAgent):
             if research_data:
                 current_context = f"\nResearch progress from previous rounds:\n{chr(10).join(research_data)}"
             
-            # Combined analysis, completion check, tool selection, and follow-up query generation in one call
-            combined_prompt = f"""
+            # Combined analysis and completion check in one call
+            analysis_prompt = f"""
 Research question: {question}
 Research mode: {mode}
 Current round: {iteration + 1}
@@ -146,14 +146,9 @@ Current round: {iteration + 1}
 Research progress from previous rounds:
 {current_context if current_context else "No previous research data - this is the first round."}
 
-Available tools:
-{tool_list}
-
 Analyze the current research progress and provide a JSON response with:
 1. analysis: What information has been gathered so far, what's missing, and what are the next steps
 2. is_complete: Whether the research is complete based on the mode requirements
-3. selected_tools: List of tools to use for this round (empty list if no tools needed)
-4. follow_up_queries: List of specific queries to use with the selected tools (empty list if no tools needed)
 
 For is_complete, consider:
 - For instant research: Is there a quick, direct answer available?
@@ -161,62 +156,117 @@ For is_complete, consider:
 - For standard research: Is there comprehensive coverage of the topic?
 - For deep research: Is there exhaustive analysis with full context?
 
-For selected_tools, consider:
-- Which tools can provide the missing information?
-- Which tools can fill the identified gaps?
-- Which tools can help with the next steps?
-- You can reuse tools from previous rounds if they would provide additional value
-- You can select different tools if they would provide better coverage
-
-For follow_up_queries, consider:
-- Generate specific, targeted queries for each selected tool
-- Queries should address the identified gaps and missing information
-- Each query should be optimized for the specific tool it will be used with
-- Queries should be more specific than the original research question
-- Generate one query per selected tool
-
 Return only a valid JSON response in this format:
 {{
     "analysis": "detailed analysis of current progress and gaps",
-    "is_complete": true/false,
-    "selected_tools": ["tool1", "tool2"] or [],
-    "follow_up_queries": ["query1", "query2"] or []
+    "is_complete": true/false
 }}
 """
             
-            combined_response = self.llm_service.generate(
-                combined_prompt,
-                system_prompt="You are a research coordinator. Analyze progress and select tools. Return only valid JSON.",
+            analysis_response = self.llm_service.generate(
+                analysis_prompt,
+                system_prompt="You are a research analyst. Analyze current progress and determine completion status. Return only valid JSON.",
                 temperature=0.0
             )
             
-            # Parse the JSON response
+            # Parse the analysis response
             try:
                 import json
-                response_data = json.loads(combined_response)
-                analysis = response_data.get("analysis", "")
-                is_complete = response_data.get("is_complete", False)
-                selected_tools = response_data.get("selected_tools", [])
-                follow_up_queries = response_data.get("follow_up_queries", [])
+                analysis_data = json.loads(analysis_response)
+                analysis = analysis_data.get("analysis", "")
+                is_complete = analysis_data.get("is_complete", False)
                 
                 # Store completion status for later use
                 self._current_round_complete = is_complete
                 
-                # Store follow-up queries for tool execution
-                self._current_round_queries = follow_up_queries
-                
             except json.JSONDecodeError:
-                logger.error(f"Failed to parse JSON response: {combined_response}")
-                # Fallback: treat as incomplete and no tools selected
+                logger.error(f"Failed to parse analysis JSON response: {analysis_response}")
+                # Fallback: treat as incomplete
                 analysis = "Failed to parse analysis response"
                 is_complete = False
-                selected_tools = []
-                follow_up_queries = []
+                self._current_round_complete = False
             
-            return selected_tools
+            # If research is complete, return empty list (no tools needed)
+            if is_complete:
+                return []
+            
+            # If research is not complete, do independent tool selection based on current context
+            return self._select_tools_independently(question, mode, research_data, available_tools, analysis)
             
         except Exception as e:
             logger.error(f"Error in round tool selection: {str(e)}")
+            return []
+    
+    def _select_tools_independently(self, question: str, mode: str, research_data: List[str], 
+                                  available_tools: List[str], analysis: str) -> List[str]:
+        """Independent tool selection based on current context and analysis."""
+        try:
+            tools_info = self._get_available_tools_info()
+            tool_descriptions = tools_info["tool_descriptions"]
+            tool_list = "\n".join([f"- {tool}: {desc}" for tool, desc in tool_descriptions.items()])
+            
+            # Create detailed context about what has been done
+            context_details = ""
+            if research_data:
+                context_details = f"\nDetailed research history:\n{chr(10).join(research_data)}"
+            
+            tool_selection_prompt = f"""
+Research question: {question}
+Research mode: {mode}
+
+Current analysis: {analysis}
+
+Available tools:
+{tool_list}
+{context_details}
+
+Based on the current analysis and research history, independently decide which tools to use for this round. Consider:
+- What specific information is still missing based on the analysis?
+- Which tools have been used before and what results did they provide?
+- Which tools would provide different perspectives or fill specific gaps?
+- What would be the most effective next step given the current context?
+- You can reuse tools if they would provide additional value
+- You can select new tools if they would provide better coverage
+- Focus on addressing the specific gaps identified in the analysis
+
+Return only a valid JSON response in this format:
+{{
+    "selected_tools": ["tool1", "tool2"] or [],
+    "follow_up_queries": ["query1", "query2"] or []
+}}
+
+For follow_up_queries, generate specific queries that:
+- Address the identified gaps from the analysis
+- Are optimized for each selected tool
+- Are more specific than the original research question
+- Target the missing information directly
+"""
+            
+            tool_selection_response = self.llm_service.generate(
+                tool_selection_prompt,
+                system_prompt="You are a research coordinator. Select tools independently based on current context and analysis. Return only valid JSON.",
+                temperature=0.0
+            )
+            
+            # Parse the tool selection response
+            try:
+                import json
+                tool_data = json.loads(tool_selection_response)
+                selected_tools = tool_data.get("selected_tools", [])
+                follow_up_queries = tool_data.get("follow_up_queries", [])
+                
+                # Store follow-up queries for tool execution
+                self._current_round_queries = follow_up_queries
+                
+                return selected_tools
+                
+            except json.JSONDecodeError:
+                logger.error(f"Failed to parse tool selection JSON response: {tool_selection_response}")
+                # Fallback: return empty list
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error in independent tool selection: {str(e)}")
             return []
     
     def _get_max_iterations_for_mode(self, mode: str) -> int:
