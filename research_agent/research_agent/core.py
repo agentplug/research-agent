@@ -144,6 +144,110 @@ class ResearchAgent(BaseAgent):
                 "Error processing research request"
             )
     
+    def _first_round_query(self, query: str, mode: str) -> Dict[str, Any]:
+        """
+        Execute the first round of research.
+        
+        Args:
+            query: Research query
+            mode: Research mode (instant, quick, standard, deep)
+            
+        Returns:
+            First round result with content and metadata
+        """
+        system_prompts = {
+            'instant': "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information.",
+            'quick': "You are a research assistant for QUICK research mode. Provide enhanced analysis with context. Include relevant background information, explain key concepts and relationships, add practical examples when helpful.",
+            'standard': "You are a research assistant for STANDARD research mode. Conduct comprehensive research with multiple perspectives. Provide thorough analysis with context, examples, and implications.",
+            'deep': "You are a research assistant for DEEP research mode. Conduct exhaustive research with academic-level analysis. Provide detailed, well-researched responses with full context, multiple perspectives, and comprehensive insights."
+        }
+        
+        temperatures = {
+            'instant': 0.1,
+            'quick': 0.2,
+            'standard': 0.2,
+            'deep': 0.3
+        }
+        
+        content = self.llm_service.generate(
+            input_data=query,
+            system_prompt=system_prompts.get(mode, "You are a helpful research assistant."),
+            temperature=temperatures.get(mode, 0.2)
+        )
+        
+        return {
+            'round': 1,
+            'query': query,
+            'content': content,
+            'timestamp': get_current_timestamp()
+        }
+    
+    def _follow_up_round_query(self, original_query: str, previous_results: List[Dict[str, Any]], mode: str) -> Optional[Dict[str, Any]]:
+        """
+        Execute a follow-up round with gap analysis.
+        
+        Args:
+            original_query: Original research query
+            previous_results: List of previous round results
+            mode: Research mode
+            
+        Returns:
+            Follow-up round result or None if goal reached
+        """
+        # Build research summary
+        research_summary = "\n".join([
+            f"Round {r['round']}: {r['query']}\n{r['content'][:300]}..."
+            for r in previous_results
+        ])
+        
+        analysis_prompt = f"""You are a research analyst. Analyze the research results and identify gaps.
+
+Original Query: {original_query}
+Previous Research:
+{research_summary}
+
+Identify what information is missing and generate a focused follow-up query. Return JSON:
+{{"goal_reached": true/false, "next_query": "specific follow-up query"}}"""
+
+        analysis_response = self.llm_service.generate(
+            input_data=analysis_prompt,
+            system_prompt="You are a research analyst specializing in gap analysis.",
+            temperature=0.3,
+            return_json=True
+        )
+        
+        try:
+            analysis = json.loads(analysis_response)
+            if analysis.get("goal_reached", False):
+                return None  # Goal reached, no more rounds needed
+            
+            next_query = analysis.get("next_query")
+            if not next_query:
+                return None  # No next query, stop
+            
+            # Execute follow-up research
+            followup_system_prompts = {
+                'quick': "You are a research assistant for QUICK research mode. Build upon previous research and address specific gaps. Focus on practical applications and ensure comprehensive coverage.",
+                'standard': "You are a research assistant for STANDARD research mode. Build upon previous research and address specific gaps. Provide comprehensive analysis with multiple perspectives and detailed insights.",
+                'deep': "You are a research assistant for DEEP research mode. Build upon previous research and address specific gaps. Provide exhaustive analysis with academic-level depth and comprehensive coverage."
+            }
+            
+            followup_content = self.llm_service.generate(
+                input_data=next_query,
+                system_prompt=followup_system_prompts.get(mode, "You are a helpful research assistant."),
+                temperature=0.2
+            )
+            
+            return {
+                'round': len(previous_results) + 1,
+                'query': next_query,
+                'content': followup_content,
+                'timestamp': get_current_timestamp()
+            }
+            
+        except Exception:
+            return None  # JSON parsing failed, stop research
+
     def instant_research(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Conduct instant research - single round quick answer.
@@ -159,14 +263,8 @@ class ResearchAgent(BaseAgent):
             start_time = datetime.now()
             self.current_mode = 'instant'
             
-            # Generate direct answer
-            system_prompt = "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information."
-            
-            content = self.llm_service.generate(
-                input_data=query,
-                system_prompt=system_prompt,
-                temperature=0.1
-            )
+            # Single round - call first_round_query only
+            first_round = self._first_round_query(query, 'instant')
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
@@ -175,7 +273,7 @@ class ResearchAgent(BaseAgent):
                 data={
                     'mode': 'instant',
                     'query': query,
-                    'content': content,
+                    'content': first_round['content'],
                     'execution_time': round(execution_time, 2),
                     'research_rounds': 1,
                     'total_rounds': 1,
@@ -219,59 +317,14 @@ class ResearchAgent(BaseAgent):
             self.current_mode = 'quick'
             results = []
             
-            # Round 1: Initial research
-            system_prompt = "You are a research assistant for QUICK research mode. Provide enhanced analysis with context. Include relevant background information, explain key concepts and relationships, add practical examples when helpful."
+            # Round 1: Call first_round_query
+            first_round = self._first_round_query(query, 'quick')
+            results.append(first_round)
             
-            content = self.llm_service.generate(
-                input_data=query,
-                system_prompt=system_prompt,
-                temperature=0.2
-            )
-            
-            results.append({
-                'round': 1,
-                'query': query,
-                'content': content,
-                'timestamp': get_current_timestamp()
-            })
-            
-            # Round 2: Gap analysis and follow-up
-            analysis_prompt = f"""You are a research analyst. Analyze the research results and identify gaps.
-
-Original Query: {query}
-Round 1 Answer: {content[:400]}...
-
-Identify what information is missing and generate a focused follow-up query. Return JSON:
-{{"goal_reached": true/false, "next_query": "specific follow-up query"}}"""
-
-            analysis_response = self.llm_service.generate(
-                input_data=analysis_prompt,
-                system_prompt="You are a research analyst specializing in gap analysis.",
-                temperature=0.3,
-                return_json=True
-            )
-            
-            try:
-                analysis = json.loads(analysis_response)
-                if not analysis.get("goal_reached", False) and analysis.get("next_query"):
-                    # Round 2: Follow-up research
-                    followup_system_prompt = "You are a research assistant for QUICK research mode. Build upon previous research and address specific gaps. Focus on practical applications and ensure comprehensive coverage."
-                    
-                    followup_content = self.llm_service.generate(
-                        input_data=analysis["next_query"],
-                        system_prompt=followup_system_prompt,
-                        temperature=0.2
-                    )
-                    
-                    results.append({
-                        'round': 2,
-                        'query': analysis["next_query"],
-                        'content': followup_content,
-                        'timestamp': get_current_timestamp()
-                    })
-            except:
-                # If JSON parsing fails, skip round 2
-                pass
+            # Round 2: Call follow_up_round_query
+            follow_up = self._follow_up_round_query(query, results, 'quick')
+            if follow_up:
+                results.append(follow_up)
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
@@ -331,64 +384,19 @@ Identify what information is missing and generate a focused follow-up query. Ret
             self.current_mode = 'standard'
             results = []
             
-            # Round 1: Initial comprehensive research
-            system_prompt = "You are a research assistant for STANDARD research mode. Conduct comprehensive analysis from multiple perspectives. Examine different viewpoints, include historical context, analyze current trends, and consider practical applications."
+            # Round 1: Call first_round_query
+            first_round = self._first_round_query(query, 'standard')
+            results.append(first_round)
             
-            content = self.llm_service.generate(
-                input_data=query,
-                system_prompt=system_prompt,
-                temperature=0.2
-            )
-            
-            results.append({
-                'round': 1,
-                'query': query,
-                'content': content,
-                'timestamp': get_current_timestamp()
-            })
-            
-            # Multi-round loop for rounds 2-3
-            for round_num in range(2, 4):
-                research_summary = "\n".join([f"Round {r['round']}: {r['query']}\n{r['content'][:300]}..." for r in results])
-                analysis_prompt = f"""You are a research analyst. Analyze the research progress and determine next action.
-
-Original Query: {query}
-Research Progress ({len(results)}/3 rounds completed):
-
-{research_summary}
-
-Return JSON:
-{{"goal_reached": true/false, "next_query": "specific follow-up query", "reasoning": "explanation"}}"""
-
-                analysis_response = self.llm_service.generate(
-                    input_data=analysis_prompt,
-                    system_prompt="You are a research analyst specializing in comprehensive research assessment.",
-                    temperature=0.3,
-                    return_json=True
-                )
+            # Round 2: Call follow_up_round_query
+            follow_up = self._follow_up_round_query(query, results, 'standard')
+            if follow_up:
+                results.append(follow_up)
                 
-                try:
-                    analysis = json.loads(analysis_response)
-                    if analysis.get("goal_reached", False) or not analysis.get("next_query"):
-                        break
-                    
-                    # Generate follow-up research
-                    followup_system_prompt = f"You are a research assistant for STANDARD research mode. Build upon previous research and address specific gaps. Focus on: {analysis.get('reasoning', '')}. Provide deeper analysis and comprehensive coverage."
-                    
-                    followup_content = self.llm_service.generate(
-                        input_data=analysis["next_query"],
-                        system_prompt=followup_system_prompt,
-                        temperature=0.2
-                    )
-                    
-                    results.append({
-                        'round': round_num,
-                        'query': analysis["next_query"],
-                        'content': followup_content,
-                        'timestamp': get_current_timestamp()
-                    })
-                except:
-                    break
+                # Round 3: Call follow_up_round_query again
+                follow_up_2 = self._follow_up_round_query(query, results, 'standard')
+                if follow_up_2:
+                    results.append(follow_up_2)
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
@@ -448,64 +456,24 @@ Return JSON:
             self.current_mode = 'deep'
             results = []
             
-            # Round 1: Foundation and overview
-            system_prompt = "You are a research assistant for DEEP research mode. Provide comprehensive overview and foundation. Include detailed historical background, analyze multiple theoretical frameworks, examine fundamental concepts, and use professional academic language."
+            # Round 1: Call first_round_query
+            first_round = self._first_round_query(query, 'deep')
+            results.append(first_round)
             
-            content = self.llm_service.generate(
-                input_data=query,
-                system_prompt=system_prompt,
-                temperature=0.3
-            )
-            
-            results.append({
-                'round': 1,
-                'query': query,
-                'content': content,
-                'timestamp': get_current_timestamp()
-            })
-            
-            # Multi-round loop for rounds 2-4
-            for round_num in range(2, 5):
-                research_summary = "\n".join([f"Round {r['round']}: {r['query']}\n{r['content'][:300]}..." for r in results])
-                analysis_prompt = f"""You are a research analyst. Analyze the research progress and determine next action.
-
-Original Query: {query}
-Research Progress ({len(results)}/4 rounds completed):
-
-{research_summary}
-
-Return JSON:
-{{"goal_reached": true/false, "next_query": "specific follow-up query", "reasoning": "explanation"}}"""
-
-                analysis_response = self.llm_service.generate(
-                    input_data=analysis_prompt,
-                    system_prompt="You are a research analyst specializing in exhaustive research assessment.",
-                    temperature=0.3,
-                    return_json=True
-                )
+            # Round 2: Call follow_up_round_query
+            follow_up = self._follow_up_round_query(query, results, 'deep')
+            if follow_up:
+                results.append(follow_up)
                 
-                try:
-                    analysis = json.loads(analysis_response)
-                    if analysis.get("goal_reached", False) or not analysis.get("next_query"):
-                        break
+                # Round 3: Call follow_up_round_query again
+                follow_up_2 = self._follow_up_round_query(query, results, 'deep')
+                if follow_up_2:
+                    results.append(follow_up_2)
                     
-                    # Generate follow-up research
-                    followup_system_prompt = f"You are a research assistant for DEEP research mode. Build upon previous research and address specific gaps. Focus on: {analysis.get('reasoning', '')}. Provide exhaustive, academic-level analysis with detailed case studies, controversies, debates, and critical evaluation."
-                    
-                    followup_content = self.llm_service.generate(
-                        input_data=analysis["next_query"],
-                        system_prompt=followup_system_prompt,
-                        temperature=0.3
-                    )
-                    
-                    results.append({
-                        'round': round_num,
-                        'query': analysis["next_query"],
-                        'content': followup_content,
-                        'timestamp': get_current_timestamp()
-                    })
-                except:
-                    break
+                    # Round 4: Call follow_up_round_query again
+                    follow_up_3 = self._follow_up_round_query(query, results, 'deep')
+                    if follow_up_3:
+                        results.append(follow_up_3)
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
