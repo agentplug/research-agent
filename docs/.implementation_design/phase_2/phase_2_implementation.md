@@ -154,7 +154,7 @@ Based on this analysis, what should be the focus for this round?
             analysis_response = self.llm_service.generate(
                 analysis_prompt,
                 system_prompt="You are a research analyst. Analyze current progress and identify what needs to be done next.",
-                temperature=0.1
+                temperature=0.0
             )
             
             # Now select tools based on the analysis
@@ -183,7 +183,7 @@ If no tools are needed for this round, return "NONE".
             selected_tools_response = self.llm_service.generate(
                 selection_prompt,
                 system_prompt="You are a research coordinator. Select tools based on research gaps and next steps.",
-                temperature=0.1
+                temperature=0.0
             )
             
             if "NONE" in selected_tools_response.upper():
@@ -232,7 +232,7 @@ Answer with "YES" if research is complete, "NO" if more research is needed.
             completion_response = self.llm_service.generate(
                 completion_prompt,
                 system_prompt="You are a research completion evaluator. Determine if research objectives are met.",
-                temperature=0.1
+                temperature=0.0
             )
             
             return "YES" in completion_response.upper()
