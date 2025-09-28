@@ -704,7 +704,7 @@ Return JSON:
         Returns:
             List of available modes
         """
-        return WorkflowFactory.get_available_modes()
+        return ['instant', 'quick', 'standard', 'deep']
     
     def get_mode_description(self, mode: str) -> str:
         """
@@ -716,7 +716,13 @@ Return JSON:
         Returns:
             Mode description
         """
-        return WorkflowFactory.get_mode_description(mode)
+        descriptions = {
+            'instant': 'Single round quick answer',
+            'quick': '2 rounds with gap analysis',
+            'standard': '3 rounds comprehensive analysis',
+            'deep': '4 rounds exhaustive analysis'
+        }
+        return descriptions.get(mode, 'Unknown mode')
     
     def get_llm_service_status(self) -> Dict[str, Any]:
         """
@@ -835,15 +841,24 @@ Return JSON:
                         'error': str(e)
                     }
             
-            # Test research workflows
+            # Test research methods
             for mode, query in test_queries.items():
                 try:
-                    workflow = WorkflowFactory.create_workflow(mode, self.llm_service)
-                    result = workflow.execute(query)
+                    if mode == 'instant':
+                        result = self.instant_research(query)
+                    elif mode == 'quick':
+                        result = self.quick_research(query)
+                    elif mode == 'standard':
+                        result = self.standard_research(query)
+                    elif mode == 'deep':
+                        result = self.deep_research(query)
+                    else:
+                        continue
+                        
                     test_results[mode] = {
                         'success': result.get('success', False),
                         'query': query,
-                        'response_time': result.get('data', {}).get('workflow', {}).get('total_time', 0),
+                        'response_time': result.get('data', {}).get('execution_time', 0),
                         'model_used': result.get('data', {}).get('model'),
                         'provider': result.get('data', {}).get('provider')
                     }
