@@ -99,13 +99,7 @@ class ResearchAgentHub:
                     message="Failed to initialize agent"
                 )
         
-        request = {
-            'method': 'instant_research',
-            'query': query,
-            'context': context or {}
-        }
-        
-        return self.agent.handle_request(request)
+        return self.agent.instant_research(query, context)
     
     def quick_research(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -125,13 +119,7 @@ class ResearchAgentHub:
                     message="Failed to initialize agent"
                 )
         
-        request = {
-            'method': 'quick_research',
-            'query': query,
-            'context': context or {}
-        }
-        
-        return self.agent.handle_request(request)
+        return self.agent.quick_research(query, context)
     
     def standard_research(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -151,13 +139,7 @@ class ResearchAgentHub:
                     message="Failed to initialize agent"
                 )
         
-        request = {
-            'method': 'standard_research',
-            'query': query,
-            'context': context or {}
-        }
-        
-        return self.agent.handle_request(request)
+        return self.agent.standard_research(query, context)
     
     def deep_research(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -177,13 +159,7 @@ class ResearchAgentHub:
                     message="Failed to initialize agent"
                 )
         
-        request = {
-            'method': 'deep_research',
-            'query': query,
-            'context': context or {}
-        }
-        
-        return self.agent.handle_request(request)
+        return self.agent.deep_research(query, context)
     
     def solve(self, query: str, mode: str = "standard", context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """

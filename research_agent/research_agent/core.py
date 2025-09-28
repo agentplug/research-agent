@@ -1,8 +1,7 @@
 """
-ResearchAgent - Deep research agent implementation.
+ResearchAgent - Simple research agent implementation.
 
-This module provides the ResearchAgent class that inherits from BaseAgent
-and implements research-specific functionality for different research modes.
+This module provides the ResearchAgent class with clean, simple research methods.
 """
 
 import json
@@ -16,15 +15,12 @@ from ..llm_service.core import LLMService, get_shared_llm_service
 from ..mode_selector.core import ModeSelector
 from ..source_tracker.core import SourceTracker
 from ..temp_file_manager.core import TempFileManager
-from .workflows.workflows import WorkflowFactory, ResearchMode
-from ..utils.utils import format_response, validate_input_data, sanitize_string
+from ..utils.utils import format_response, validate_input_data, sanitize_string, get_current_timestamp
 
 
 class ResearchAgent(BaseAgent):
     """
-    Research agent for conducting deep research in multiple modes.
-    
-    Inherits from BaseAgent and adds research-specific capabilities.
+    Simple research agent for conducting research in multiple modes.
     """
     
     def __init__(
@@ -35,7 +31,7 @@ class ResearchAgent(BaseAgent):
         model: Optional[str] = None
     ):
         """
-        Initialize ResearchAgent with Phase 2 components.
+        Initialize ResearchAgent.
         
         Args:
             config: Configuration dictionary
@@ -46,8 +42,19 @@ class ResearchAgent(BaseAgent):
         # Initialize base agent
         super().__init__(config, session_id, logger_name)
         
-        # Initialize Phase 2 components
+        # Initialize LLM service
         self.llm_service = get_shared_llm_service(config, model)
+        
+        # Initialize Phase 2 components
+        self.mode_selector = ModeSelector(config)
+        self.source_tracker = SourceTracker(config)
+        self.temp_file_manager = TempFileManager(config)
+        
+        # Initialize research capabilities
+        self._initialize_research_capabilities()
+        
+        self.current_mode = None
+        self.research_history = []
         self.mode_selector = ModeSelector(config)
         self.source_tracker = SourceTracker(config)
         self.temp_file_manager = TempFileManager(config)
@@ -137,213 +144,411 @@ class ResearchAgent(BaseAgent):
                 "Error processing research request"
             )
     
-    def instant_research(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    def instant_research(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Conduct instant research.
+        Conduct instant research - single round quick answer.
         
         Args:
-            request: Research request
+            query: Research query
+            context: Additional context
             
         Returns:
             Research results
         """
         try:
-            # Validate request
-            schema = {
-                'type': 'object',
-                'required': ['query'],
-                'properties': {
-                    'query': {'type': 'string', 'minLength': 1},
-                    'context': {'type': 'object'}
-                }
-            }
-            
-            if not self.validate_request(request, schema):
-                return format_response(
-                    success=False,
-                    message="Invalid request format for instant research"
-                )
-            
-            query = sanitize_string(request['query'])
-            context = request.get('context', {})
-            
-            # Set current mode
+            start_time = datetime.now()
             self.current_mode = 'instant'
             
-            # Create workflow
-            workflow = WorkflowFactory.create_workflow('instant', self.llm_service)
+            # Generate direct answer
+            system_prompt = "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information."
             
-            # Execute research
-            result = workflow.execute(query, context)
+            content = self.llm_service.generate(
+                input_data=query,
+                system_prompt=system_prompt,
+                temperature=0.1
+            )
+            
+            execution_time = (datetime.now() - start_time).total_seconds()
+            
+            result = format_response(
+                success=True,
+                data={
+                    'mode': 'instant',
+                    'query': query,
+                    'content': content,
+                    'execution_time': round(execution_time, 2),
+                    'research_rounds': 1,
+                    'total_rounds': 1,
+                    'sources_used': 0,
+                    'context': context or {},
+                    'timestamp': get_current_timestamp()
+                },
+                message="Instant research completed"
+            )
             
             # Store in research history
-            self._add_to_research_history('instant', query, result)
+            self.research_history.append({
+                'mode': 'instant',
+                'query': query,
+                'result': result,
+                'timestamp': get_current_timestamp()
+            })
             
             return result
             
         except Exception as e:
-            error_msg = self.error_messages.get('instant_research', 'Error conducting instant research: {error}')
             return self.error_handler.handle_error(
                 e,
-                {'request': request, 'mode': 'instant'},
-                error_msg.format(error=str(e))
+                {'query': query, 'mode': 'instant'},
+                f"Error conducting instant research: {str(e)}"
             )
     
-    def quick_research(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    def quick_research(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Conduct quick research.
+        Conduct quick research - 2 rounds with gap analysis.
         
         Args:
-            request: Research request
+            query: Research query
+            context: Additional context
             
         Returns:
             Research results
         """
         try:
-            # Validate request
-            schema = {
-                'type': 'object',
-                'required': ['query'],
-                'properties': {
-                    'query': {'type': 'string', 'minLength': 1},
-                    'context': {'type': 'object'}
-                }
-            }
-            
-            if not self.validate_request(request, schema):
-                return format_response(
-                    success=False,
-                    message="Invalid request format for quick research"
-                )
-            
-            query = sanitize_string(request['query'])
-            context = request.get('context', {})
-            
-            # Set current mode
+            start_time = datetime.now()
             self.current_mode = 'quick'
+            results = []
             
-            # Create workflow
-            workflow = WorkflowFactory.create_workflow('quick', self.llm_service)
+            # Round 1: Initial research
+            system_prompt = "You are a research assistant for QUICK research mode. Provide enhanced analysis with context. Include relevant background information, explain key concepts and relationships, add practical examples when helpful."
             
-            # Execute research
-            result = workflow.execute(query, context)
+            content = self.llm_service.generate(
+                input_data=query,
+                system_prompt=system_prompt,
+                temperature=0.2
+            )
+            
+            results.append({
+                'round': 1,
+                'query': query,
+                'content': content,
+                'timestamp': get_current_timestamp()
+            })
+            
+            # Round 2: Gap analysis and follow-up
+            analysis_prompt = f"""You are a research analyst. Analyze the research results and identify gaps.
+
+Original Query: {query}
+Round 1 Answer: {content[:400]}...
+
+Identify what information is missing and generate a focused follow-up query. Return JSON:
+{{"goal_reached": true/false, "next_query": "specific follow-up query"}}"""
+
+            analysis_response = self.llm_service.generate(
+                input_data=analysis_prompt,
+                system_prompt="You are a research analyst specializing in gap analysis.",
+                temperature=0.3,
+                return_json=True
+            )
+            
+            try:
+                analysis = json.loads(analysis_response)
+                if not analysis.get("goal_reached", False) and analysis.get("next_query"):
+                    # Round 2: Follow-up research
+                    followup_system_prompt = "You are a research assistant for QUICK research mode. Build upon previous research and address specific gaps. Focus on practical applications and ensure comprehensive coverage."
+                    
+                    followup_content = self.llm_service.generate(
+                        input_data=analysis["next_query"],
+                        system_prompt=followup_system_prompt,
+                        temperature=0.2
+                    )
+                    
+                    results.append({
+                        'round': 2,
+                        'query': analysis["next_query"],
+                        'content': followup_content,
+                        'timestamp': get_current_timestamp()
+                    })
+            except:
+                # If JSON parsing fails, skip round 2
+                pass
+            
+            execution_time = (datetime.now() - start_time).total_seconds()
+            
+            # Combine results
+            combined_content = f"# Research Results ({len(results)} rounds)\n\n"
+            for result in results:
+                combined_content += f"## Round {result['round']}: {result['query']}\n\n"
+                combined_content += f"{result['content']}\n\n"
+            
+            response = format_response(
+                success=True,
+                data={
+                    'mode': 'quick',
+                    'query': query,
+                    'content': combined_content,
+                    'rounds': results,
+                    'execution_time': round(execution_time, 2),
+                    'research_rounds': len(results),
+                    'total_rounds': 2,
+                    'sources_used': 0,
+                    'context': context or {},
+                    'timestamp': get_current_timestamp()
+                },
+                message=f"Quick research completed ({len(results)} rounds)"
+            )
             
             # Store in research history
-            self._add_to_research_history('quick', query, result)
+            self.research_history.append({
+                'mode': 'quick',
+                'query': query,
+                'result': response,
+                'timestamp': get_current_timestamp()
+            })
             
-            return result
+            return response
             
         except Exception as e:
-            error_msg = self.error_messages.get('quick_research', 'Error conducting quick research: {error}')
             return self.error_handler.handle_error(
                 e,
-                {'request': request, 'mode': 'quick'},
-                error_msg.format(error=str(e))
+                {'query': query, 'mode': 'quick'},
+                f"Error conducting quick research: {str(e)}"
             )
     
-    def standard_research(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    def standard_research(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Conduct standard research.
+        Conduct standard research - 3 rounds with comprehensive analysis.
         
         Args:
-            request: Research request
+            query: Research query
+            context: Additional context
             
         Returns:
             Research results
         """
         try:
-            # Validate request
-            schema = {
-                'type': 'object',
-                'required': ['query'],
-                'properties': {
-                    'query': {'type': 'string', 'minLength': 1},
-                    'context': {'type': 'object'}
-                }
-            }
-            
-            if not self.validate_request(request, schema):
-                return format_response(
-                    success=False,
-                    message="Invalid request format for standard research"
-                )
-            
-            query = sanitize_string(request['query'])
-            context = request.get('context', {})
-            
-            # Set current mode
+            start_time = datetime.now()
             self.current_mode = 'standard'
+            results = []
             
-            # Create workflow
-            workflow = WorkflowFactory.create_workflow('standard', self.llm_service)
+            # Round 1: Initial comprehensive research
+            system_prompt = "You are a research assistant for STANDARD research mode. Conduct comprehensive analysis from multiple perspectives. Examine different viewpoints, include historical context, analyze current trends, and consider practical applications."
             
-            # Execute research
-            result = workflow.execute(query, context)
+            content = self.llm_service.generate(
+                input_data=query,
+                system_prompt=system_prompt,
+                temperature=0.2
+            )
+            
+            results.append({
+                'round': 1,
+                'query': query,
+                'content': content,
+                'timestamp': get_current_timestamp()
+            })
+            
+            # Multi-round loop for rounds 2-3
+            for round_num in range(2, 4):
+                research_summary = "\n".join([f"Round {r['round']}: {r['query']}\n{r['content'][:300]}..." for r in results])
+                analysis_prompt = f"""You are a research analyst. Analyze the research progress and determine next action.
+
+Original Query: {query}
+Research Progress ({len(results)}/3 rounds completed):
+
+{research_summary}
+
+Return JSON:
+{{"goal_reached": true/false, "next_query": "specific follow-up query", "reasoning": "explanation"}}"""
+
+                analysis_response = self.llm_service.generate(
+                    input_data=analysis_prompt,
+                    system_prompt="You are a research analyst specializing in comprehensive research assessment.",
+                    temperature=0.3,
+                    return_json=True
+                )
+                
+                try:
+                    analysis = json.loads(analysis_response)
+                    if analysis.get("goal_reached", False) or not analysis.get("next_query"):
+                        break
+                    
+                    # Generate follow-up research
+                    followup_system_prompt = f"You are a research assistant for STANDARD research mode. Build upon previous research and address specific gaps. Focus on: {analysis.get('reasoning', '')}. Provide deeper analysis and comprehensive coverage."
+                    
+                    followup_content = self.llm_service.generate(
+                        input_data=analysis["next_query"],
+                        system_prompt=followup_system_prompt,
+                        temperature=0.2
+                    )
+                    
+                    results.append({
+                        'round': round_num,
+                        'query': analysis["next_query"],
+                        'content': followup_content,
+                        'timestamp': get_current_timestamp()
+                    })
+                except:
+                    break
+            
+            execution_time = (datetime.now() - start_time).total_seconds()
+            
+            # Combine results
+            combined_content = f"# Comprehensive Research Results ({len(results)} rounds)\n\n"
+            for result in results:
+                combined_content += f"## Round {result['round']}: {result['query']}\n\n"
+                combined_content += f"{result['content']}\n\n"
+            
+            response = format_response(
+                success=True,
+                data={
+                    'mode': 'standard',
+                    'query': query,
+                    'content': combined_content,
+                    'rounds': results,
+                    'execution_time': round(execution_time, 2),
+                    'research_rounds': len(results),
+                    'total_rounds': 3,
+                    'sources_used': 0,
+                    'context': context or {},
+                    'timestamp': get_current_timestamp()
+                },
+                message=f"Standard research completed ({len(results)} rounds)"
+            )
             
             # Store in research history
-            self._add_to_research_history('standard', query, result)
+            self.research_history.append({
+                'mode': 'standard',
+                'query': query,
+                'result': response,
+                'timestamp': get_current_timestamp()
+            })
             
-            return result
+            return response
             
         except Exception as e:
-            error_msg = self.error_messages.get('standard_research', 'Error conducting standard research: {error}')
             return self.error_handler.handle_error(
                 e,
-                {'request': request, 'mode': 'standard'},
-                error_msg.format(error=str(e))
+                {'query': query, 'mode': 'standard'},
+                f"Error conducting standard research: {str(e)}"
             )
     
-    def deep_research(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    def deep_research(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Conduct deep research.
+        Conduct deep research - 4 rounds with exhaustive analysis.
         
         Args:
-            request: Research request
+            query: Research query
+            context: Additional context
             
         Returns:
             Research results
         """
         try:
-            # Validate request
-            schema = {
-                'type': 'object',
-                'required': ['query'],
-                'properties': {
-                    'query': {'type': 'string', 'minLength': 1},
-                    'context': {'type': 'object'}
-                }
-            }
-            
-            if not self.validate_request(request, schema):
-                return format_response(
-                    success=False,
-                    message="Invalid request format for deep research"
-                )
-            
-            query = sanitize_string(request['query'])
-            context = request.get('context', {})
-            
-            # Set current mode
+            start_time = datetime.now()
             self.current_mode = 'deep'
+            results = []
             
-            # Create workflow
-            workflow = WorkflowFactory.create_workflow('deep', self.llm_service)
+            # Round 1: Foundation and overview
+            system_prompt = "You are a research assistant for DEEP research mode. Provide comprehensive overview and foundation. Include detailed historical background, analyze multiple theoretical frameworks, examine fundamental concepts, and use professional academic language."
             
-            # Execute research
-            result = workflow.execute(query, context)
+            content = self.llm_service.generate(
+                input_data=query,
+                system_prompt=system_prompt,
+                temperature=0.3
+            )
+            
+            results.append({
+                'round': 1,
+                'query': query,
+                'content': content,
+                'timestamp': get_current_timestamp()
+            })
+            
+            # Multi-round loop for rounds 2-4
+            for round_num in range(2, 5):
+                research_summary = "\n".join([f"Round {r['round']}: {r['query']}\n{r['content'][:300]}..." for r in results])
+                analysis_prompt = f"""You are a research analyst. Analyze the research progress and determine next action.
+
+Original Query: {query}
+Research Progress ({len(results)}/4 rounds completed):
+
+{research_summary}
+
+Return JSON:
+{{"goal_reached": true/false, "next_query": "specific follow-up query", "reasoning": "explanation"}}"""
+
+                analysis_response = self.llm_service.generate(
+                    input_data=analysis_prompt,
+                    system_prompt="You are a research analyst specializing in exhaustive research assessment.",
+                    temperature=0.3,
+                    return_json=True
+                )
+                
+                try:
+                    analysis = json.loads(analysis_response)
+                    if analysis.get("goal_reached", False) or not analysis.get("next_query"):
+                        break
+                    
+                    # Generate follow-up research
+                    followup_system_prompt = f"You are a research assistant for DEEP research mode. Build upon previous research and address specific gaps. Focus on: {analysis.get('reasoning', '')}. Provide exhaustive, academic-level analysis with detailed case studies, controversies, debates, and critical evaluation."
+                    
+                    followup_content = self.llm_service.generate(
+                        input_data=analysis["next_query"],
+                        system_prompt=followup_system_prompt,
+                        temperature=0.3
+                    )
+                    
+                    results.append({
+                        'round': round_num,
+                        'query': analysis["next_query"],
+                        'content': followup_content,
+                        'timestamp': get_current_timestamp()
+                    })
+                except:
+                    break
+            
+            execution_time = (datetime.now() - start_time).total_seconds()
+            
+            # Combine results
+            combined_content = f"# Exhaustive Research Results ({len(results)} rounds)\n\n"
+            for result in results:
+                combined_content += f"## Round {result['round']}: {result['query']}\n\n"
+                combined_content += f"{result['content']}\n\n"
+            
+            response = format_response(
+                success=True,
+                data={
+                    'mode': 'deep',
+                    'query': query,
+                    'content': combined_content,
+                    'rounds': results,
+                    'execution_time': round(execution_time, 2),
+                    'research_rounds': len(results),
+                    'total_rounds': 4,
+                    'sources_used': 0,
+                    'context': context or {},
+                    'timestamp': get_current_timestamp()
+                },
+                message=f"Deep research completed ({len(results)} rounds)"
+            )
             
             # Store in research history
-            self._add_to_research_history('deep', query, result)
+            self.research_history.append({
+                'mode': 'deep',
+                'query': query,
+                'result': response,
+                'timestamp': get_current_timestamp()
+            })
             
-            return result
+            return response
             
         except Exception as e:
-            error_msg = self.error_messages.get('deep_research', 'Error conducting deep research: {error}')
             return self.error_handler.handle_error(
                 e,
-                {'request': request, 'mode': 'deep'},
-                error_msg.format(error=str(e))
+                {'query': query, 'mode': 'deep'},
+                f"Error conducting deep research: {str(e)}"
             )
+    
     
     def solve(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
