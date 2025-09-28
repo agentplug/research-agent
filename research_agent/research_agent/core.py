@@ -166,11 +166,20 @@ Return JSON: {{"analysis": "analysis of the research results", "goal_reached": T
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
-            # Combine results
-            combined_content = f"# Research Results ({len(results)} rounds)\n\n"
+            # Combine results into JSON structure
+            combined_content = {
+                "research_summary": f"Research completed in {len(results)} rounds",
+                "total_rounds": len(results),
+                "rounds": []
+            }
+            
             for result in results:
-                combined_content += f"## Round {result['round']}: {result['query']}\n\n"
-                combined_content += f"{result['content']}\n\n"
+                combined_content["rounds"].append({
+                    "round_number": result['round'],
+                    "query": result['query'],
+                    "content": result['content'],
+                    "timestamp": result['timestamp']
+                })
             
             response = format_response(
                 success=True,
@@ -221,11 +230,20 @@ Return JSON: {{"analysis": "analysis of the research results", "goal_reached": T
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
-            # Combine results
-            combined_content = f"# Comprehensive Research Results ({len(results)} rounds)\n\n"
+            # Combine results into JSON structure
+            combined_content = {
+                "research_summary": f"Comprehensive research completed in {len(results)} rounds",
+                "total_rounds": len(results),
+                "rounds": []
+            }
+            
             for result in results:
-                combined_content += f"## Round {result['round']}: {result['query']}\n\n"
-                combined_content += f"{result['content']}\n\n"
+                combined_content["rounds"].append({
+                    "round_number": result['round'],
+                    "query": result['query'],
+                    "content": result['content'],
+                    "timestamp": result['timestamp']
+                })
             
             response = format_response(
                 success=True,
@@ -276,11 +294,20 @@ Return JSON: {{"analysis": "analysis of the research results", "goal_reached": T
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
-            # Combine results
-            combined_content = f"# Exhaustive Research Results ({len(results)} rounds)\n\n"
+            # Combine results into JSON structure
+            combined_content = {
+                "research_summary": f"Exhaustive research completed in {len(results)} rounds",
+                "total_rounds": len(results),
+                "rounds": []
+            }
+            
             for result in results:
-                combined_content += f"## Round {result['round']}: {result['query']}\n\n"
-                combined_content += f"{result['content']}\n\n"
+                combined_content["rounds"].append({
+                    "round_number": result['round'],
+                    "query": result['query'],
+                    "content": result['content'],
+                    "timestamp": result['timestamp']
+                })
             
             response = format_response(
                 success=True,
