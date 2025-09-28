@@ -51,20 +51,20 @@ src/base_agent/
 ```python
 class BaseAgent(ABC):
     """Base agent class with common capabilities"""
-    
+
     def __init__(self, llm_service, external_tools=None):
         # Initialization logic
-    
+
     @abstractmethod
     async def solve(self, question: str) -> Dict[str, Any]:
         """Universal solve method - to be implemented by subclasses"""
-    
+
     async def get_available_tools(self) -> List[str]:
         """Get list of available tools"""
-    
+
     def validate_input(self, input_data: Dict[str, Any]) -> bool:
         """Common input validation"""
-    
+
     async def handle_error(self, error: Exception) -> Dict[str, Any]:
         """Common error handling"""
 ```
@@ -73,17 +73,17 @@ class BaseAgent(ABC):
 ```python
 class ContextManager:
     """Manages agent context and state"""
-    
+
     def __init__(self):
         self.context = {}
         self.session_id = None
-    
+
     def set_context(self, key: str, value: Any):
         """Set context value"""
-    
+
     def get_context(self, key: str = None) -> Any:
         """Get context value"""
-    
+
     def clear_context(self):
         """Clear all context"""
 ```
@@ -92,13 +92,13 @@ class ContextManager:
 ```python
 class ErrorHandler:
     """Centralized error handling and logging"""
-    
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-    
+
     async def handle_error(self, error: Exception, context: Dict = None) -> Dict[str, Any]:
         """Handle and log errors"""
-    
+
     def log_error(self, error: Exception, context: Dict = None):
         """Log error with context"""
 ```
@@ -130,25 +130,25 @@ src/research_agent/
 ```python
 class ResearchAgent(BaseAgent):
     """Research agent specialized for research tasks"""
-    
+
     def __init__(self, llm_service, external_tools=None):
         super().__init__(llm_service, external_tools)
         self.research_engine = ResearchEngine()
         self.mode_selector = ModeSelector()
         self.source_tracker = SourceTracker()
-    
+
     async def instant_research(self, question: str) -> Dict[str, Any]:
         """Instant research mode"""
-    
+
     async def quick_research(self, question: str) -> Dict[str, Any]:
         """Quick research mode"""
-    
+
     async def standard_research(self, question: str) -> Dict[str, Any]:
         """Standard research mode"""
-    
+
     async def deep_research(self, question: str) -> Dict[str, Any]:
         """Deep research mode"""
-    
+
     async def solve(self, question: str) -> Dict[str, Any]:
         """Auto mode selection for research"""
 ```
@@ -157,19 +157,19 @@ class ResearchAgent(BaseAgent):
 ```python
 class ResearchEngine:
     """Core research orchestration engine"""
-    
+
     def __init__(self):
         self.tool_coordinator = ToolCoordinator()
         self.data_analyzer = DataAnalyzer()
         self.gap_identifier = GapIdentifier()
         self.query_generator = QueryGenerator()
-    
+
     async def execute_research(self, question: str, mode: str) -> Dict[str, Any]:
         """Execute research based on mode"""
-    
+
     async def analyze_data(self, data: List[Dict]) -> Dict[str, Any]:
         """Analyze retrieved data"""
-    
+
     async def identify_gaps(self, analysis: Dict, question: str) -> List[str]:
         """Identify information gaps"""
 ```
@@ -178,17 +178,17 @@ class ResearchEngine:
 ```python
 class SourceTracker:
     """Tracks scraped URLs to prevent duplicates"""
-    
+
     def __init__(self):
         self.used_urls = set()
         self.url_metadata = {}
-    
+
     def is_url_used(self, url: str) -> bool:
         """Check if URL has been previously scraped"""
-    
+
     def mark_url_used(self, url: str, metadata: Dict = None):
         """Mark URL as used"""
-    
+
     def get_unused_urls(self, urls: List[str]) -> List[str]:
         """Filter out used URLs from a list"""
 ```
@@ -212,17 +212,17 @@ src/llm_service/
 ```python
 class CoreLLMService:
     """Core LLM service with multi-provider support"""
-    
+
     def __init__(self):
         self.providers = {}
         self.current_provider = None
-    
+
     async def generate(self, prompt: str, **kwargs) -> str:
         """Generate text using LLM"""
-    
+
     def register_provider(self, name: str, provider):
         """Register a new LLM provider"""
-    
+
     def get_available_providers(self) -> List[str]:
         """Get list of available providers"""
 ```
@@ -268,14 +268,14 @@ src/utils/
 ```python
 class TempFileManager:
     """Manages temporary files for research data"""
-    
+
     def __init__(self):
         self.temp_dir = tempfile.mkdtemp(prefix="research_agent_")
         self.files = {}
-    
+
     def create_temp_file(self, name: str, data: Any) -> str:
         """Create a temporary file with data"""
-    
+
     def cleanup(self):
         """Clean up all temporary files"""
 ```
@@ -289,39 +289,39 @@ graph TB
     subgraph "Entry Point"
         A[agent.py]
     end
-    
+
     subgraph "Core Modules"
         B[ResearchAgent]
         C[BaseAgent]
         D[LLMService]
     end
-    
+
     subgraph "Research Components"
         E[ResearchEngine]
         F[ModeSelector]
         G[SourceTracker]
         H[ClarificationSystem]
     end
-    
+
     subgraph "Workflows"
         I[InstantWorkflow]
         J[QuickWorkflow]
         K[StandardWorkflow]
         L[DeepWorkflow]
     end
-    
+
     subgraph "External Tools"
         M[UserProvidedTools]
         N[ToolDiscovery]
         O[ToolCoordination]
     end
-    
+
     subgraph "Utilities"
         Q[TempFileManager]
         R[ContextManager]
         S[ErrorHandler]
     end
-    
+
     A --> B
     B --> C
     B --> E

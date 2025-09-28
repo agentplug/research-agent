@@ -66,7 +66,7 @@ QUICK_RESPONSES = [
 **Example Responses**:
 ```python
 # Question: "How does machine learning work?"
-"Enhanced analysis of How does machine learning work?: 
+"Enhanced analysis of How does machine learning work?:
 
 Machine learning is a subset of artificial intelligence that enables computers to learn and improve from experience without being explicitly programmed. The process involves feeding large amounts of data into algorithms that can identify patterns and make predictions or decisions based on that data.
 

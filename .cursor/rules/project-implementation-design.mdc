@@ -1,6 +1,6 @@
 ---
 description: Call when do project level implementation design (high level)
-globs: 
+globs:
 alwaysApply: false
 ---
 # Project Implementation Design Framework - Hierarchical Structure

@@ -164,7 +164,7 @@ import agenthub as ah
 
 # Load production-ready agent
 agent = ah.load_agent(
-    "agentplug/research-agent", 
+    "agentplug/research-agent",
     external_tools=["web_search", "academic_search", "news_search", "document_retrieval"]
 )
 

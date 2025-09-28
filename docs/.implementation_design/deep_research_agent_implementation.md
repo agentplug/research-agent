@@ -113,28 +113,28 @@ import logging
 
 class BaseAgent(ABC):
     """Base agent class with common capabilities"""
-    
+
     def __init__(self, llm_service, external_tools: Optional[List] = None):
         self.llm_service = llm_service
         self.external_tools = external_tools or []
         self.context_manager = ContextManager()
         self.error_handler = ErrorHandler()
         self.logger = logging.getLogger(self.__class__.__name__)
-    
+
     @abstractmethod
     async def solve(self, question: str) -> Dict[str, Any]:
         """Universal solve method - to be implemented by subclasses"""
         pass
-    
+
     async def get_available_tools(self) -> List[str]:
         """Get list of available tools"""
         return [tool.name for tool in self.external_tools]
-    
+
     def validate_input(self, input_data: Dict[str, Any]) -> bool:
         """Common input validation"""
         # Implementation details
         pass
-    
+
     async def handle_error(self, error: Exception) -> Dict[str, Any]:
         """Common error handling"""
         # Implementation details
@@ -152,34 +152,34 @@ from .source_tracker import SourceTracker
 
 class ResearchAgent(BaseAgent):
     """Research agent specialized for research tasks"""
-    
+
     def __init__(self, llm_service, external_tools=None):
         super().__init__(llm_service, external_tools)
         self.research_engine = ResearchEngine()
         self.mode_selector = ModeSelector()
         self.source_tracker = SourceTracker()
-    
+
     async def instant_research(self, question: str) -> Dict[str, Any]:
         """Instant research mode"""
         return await self._execute_research(question, mode="instant")
-    
+
     async def quick_research(self, question: str) -> Dict[str, Any]:
         """Quick research mode"""
         return await self._execute_research(question, mode="quick")
-    
+
     async def standard_research(self, question: str) -> Dict[str, Any]:
         """Standard research mode"""
         return await self._execute_research(question, mode="standard")
-    
+
     async def deep_research(self, question: str) -> Dict[str, Any]:
         """Deep research mode"""
         return await self._execute_research(question, mode="deep")
-    
+
     async def solve(self, question: str) -> Dict[str, Any]:
         """Auto mode selection for research"""
         mode = await self.mode_selector.select_mode(question, self.context_manager.get_context())
         return await self._execute_research(question, mode=mode)
-    
+
     async def _execute_research(self, question: str, mode: str) -> Dict[str, Any]:
         """Internal research execution"""
         # Implementation details
@@ -210,17 +210,17 @@ logger = logging.getLogger(__name__)
 
 class ResearchAgent:
     """Deep research agent for comprehensive research tasks."""
-    
+
     def __init__(self, tool_context: Optional[Dict[str, Any]] = None):
         """
         Initialize the research agent.
-        
+
         Args:
             tool_context: Dictionary containing tool metadata and context information
         """
         self.config = self._load_config()
         self.llm_service = get_shared_llm_service()
-        
+
         # Parse tool context from AgentHub
         self.tool_context = tool_context or {}
         self.available_tools = self.tool_context.get("available_tools", [])
@@ -264,14 +264,14 @@ class ResearchAgent:
                     "solve": "Error in research: {error}"
                 }
             }
-    
+
     def instant_research(self, question: str) -> str:
         """
         Conduct instant research (1 round, 10 sources, 15-30 sec).
-        
+
         Args:
             question: Research question or topic
-            
+
         Returns:
             Instant research results with sources and analysis
         """
@@ -283,19 +283,19 @@ class ResearchAgent:
                 "timeout_seconds": 30,
                 "mode": "instant"
             }
-            
+
             return self._execute_research_workflow(question, research_config)
-                
+
         except Exception as e:
             return self.config["error_messages"]["instant_research"].format(error=str(e))
-    
+
     def quick_research(self, question: str) -> str:
         """
         Conduct quick research (2 rounds, 20 sources, 1-2 min).
-        
+
         Args:
             question: Research question or topic
-            
+
         Returns:
             Quick research results with sources and analysis
         """
@@ -307,19 +307,19 @@ class ResearchAgent:
                 "timeout_seconds": 120,
                 "mode": "quick"
             }
-            
+
             return self._execute_research_workflow(question, research_config)
-                
+
         except Exception as e:
             return self.config["error_messages"]["quick_research"].format(error=str(e))
-    
+
     def standard_research(self, question: str) -> str:
         """
         Conduct standard research (2-5 rounds, 20-50 sources, 8-15 min).
-        
+
         Args:
             question: Research question or topic
-            
+
         Returns:
             Standard research results with sources and analysis
         """
@@ -331,19 +331,19 @@ class ResearchAgent:
                 "timeout_seconds": 900,  # 15 minutes
                 "mode": "standard"
             }
-            
+
             return self._execute_research_workflow(question, research_config)
-                
+
         except Exception as e:
             return self.config["error_messages"]["standard_research"].format(error=str(e))
-    
+
     def deep_research(self, question: str) -> str:
         """
         Conduct deep research (5-12 rounds, 50-120 sources, 20-30 min).
-        
+
         Args:
             question: Research question or topic
-            
+
         Returns:
             Deep research results with sources and analysis
         """
@@ -355,19 +355,19 @@ class ResearchAgent:
                 "timeout_seconds": 1800,  # 30 minutes
                 "mode": "deep"
             }
-            
+
             return self._execute_research_workflow(question, research_config)
-                
+
         except Exception as e:
             return self.config["error_messages"]["deep_research"].format(error=str(e))
-    
+
     def solve(self, question: str) -> str:
         """
         Universal solve method with auto mode selection.
-        
+
         Args:
             question: Research question or topic
-            
+
         Returns:
             Research results with automatically selected mode
         """
@@ -384,15 +384,15 @@ class ResearchAgent:
                 return self.deep_research(question)
         except Exception as e:
             return self.config["error_messages"]["solve"].format(error=str(e))
-    
+
     def _execute_research_workflow(self, question: str, config: Dict[str, Any]) -> str:
         """
         Execute research workflow based on configuration.
-        
+
         Args:
             question: Research question
             config: Research configuration (rounds, sources, timeout, mode)
-            
+
         Returns:
             Research results
         """
@@ -401,86 +401,86 @@ class ResearchAgent:
             max_rounds = config["max_rounds"]
             sources_per_round = config["sources_per_round"]
             timeout_seconds = config["timeout_seconds"]
-            
+
             # Initialize research state
             research_data = []
             sources_used = set()
             current_round = 0
-            
+
             # Build initial system prompt based on mode
             system_prompt = self._build_research_prompt(mode)
-            
+
             # Research workflow based on mode
             if mode == "instant":
                 # Instant: Single round, direct answer
                 return self._execute_single_round(question, system_prompt, sources_per_round, sources_used)
-            
+
             elif mode == "quick":
                 # Quick: 2 rounds with analysis
                 for round_num in range(1, max_rounds + 1):
                     current_round = round_num
                     round_data = self._execute_single_round(question, system_prompt, sources_per_round, sources_used)
                     research_data.append(round_data)
-                    
+
                     # Analyze and enhance for next round
                     if round_num < max_rounds:
                         question = self._analyze_and_enhance_question(question, research_data, round_num)
-                
+
                 return self._synthesize_results(question, research_data, mode)
-            
+
             elif mode == "standard":
                 # Standard: 5 rounds with comprehensive analysis
                 for round_num in range(1, max_rounds + 1):
                     current_round = round_num
                     round_data = self._execute_single_round(question, system_prompt, sources_per_round, sources_used)
                     research_data.append(round_data)
-                    
+
                     # Analyze gaps and generate follow-up queries
                     if round_num < max_rounds:
                         gaps = self._identify_research_gaps(question, research_data)
                         if gaps:
                             question = self._generate_follow_up_queries(question, gaps, research_data)
-                
+
                 return self._synthesize_results(question, research_data, mode)
-            
+
             elif mode == "deep":
                 # Deep: 12 rounds with clarification and exhaustive analysis
                 # First, generate clarification questions
                 clarifications = self._generate_clarification_questions(question)
-                
+
                 # If clarifications are needed, ask for them (in real implementation)
                 # For now, proceed with enhanced question
                 enhanced_question = self._enhance_question_with_context(question, clarifications)
-                
+
                 for round_num in range(1, max_rounds + 1):
                     current_round = round_num
                     round_data = self._execute_single_round(enhanced_question, system_prompt, sources_per_round, sources_used)
                     research_data.append(round_data)
-                    
+
                     # Deep analysis and gap identification
                     if round_num < max_rounds:
                         gaps = self._identify_research_gaps(enhanced_question, research_data)
                         if gaps:
                             enhanced_question = self._generate_follow_up_queries(enhanced_question, gaps, research_data)
-                
+
                 return self._synthesize_results(enhanced_question, research_data, mode)
-            
+
             else:
                 return f"Unknown research mode: {mode}"
-                
+
         except Exception as e:
             return f"Error in research workflow: {str(e)}"
-    
+
     def _execute_single_round(self, question: str, system_prompt: str, sources_per_round: int, sources_used: set) -> Dict[str, Any]:
         """
         Execute a single research round.
-        
+
         Args:
             question: Research question
             system_prompt: System prompt for this round
             sources_per_round: Number of sources to use
             sources_used: Set of already used sources
-            
+
         Returns:
             Round results
         """
@@ -490,13 +490,13 @@ class ResearchAgent:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Research question: {question}\nSources per round: {sources_per_round}"}
             ]
-            
+
             # Generate response
             response = self.llm_service.generate(messages, temperature=self.config["ai"]["temperature"])
-            
+
             # Process response and handle tool calls
             result = self._process_research_response(response, "single_round")
-            
+
             if result.get("status") == "tool_requested" and "tool_calls" in result:
                 # Execute tools and get results
                 tool_results = self._execute_research_tools(result["tool_calls"], question, "single_round")
@@ -513,7 +513,7 @@ class ResearchAgent:
                     "sources_used": list(sources_used),
                     "status": "completed"
                 }
-                
+
         except Exception as e:
             return {
                 "question": question,
@@ -521,7 +521,7 @@ class ResearchAgent:
                 "sources_used": list(sources_used),
                 "status": "error"
             }
-    
+
     def _analyze_and_enhance_question(self, original_question: str, research_data: List[Dict], round_num: int) -> str:
         """Analyze research data and enhance question for next round."""
         try:
@@ -535,12 +535,12 @@ Research data so far:
 
 Provide an enhanced question that addresses gaps in the current research.
 """
-            
+
             response = self.llm_service.generate(analysis_prompt, temperature=0.1)
             return response.strip()
         except Exception as e:
             return original_question
-    
+
     def _identify_research_gaps(self, question: str, research_data: List[Dict]) -> List[str]:
         """Identify gaps in current research data."""
         try:
@@ -555,13 +555,13 @@ Research data:
 List the specific information gaps that need to be addressed.
 Return as a JSON array of strings.
 """
-            
+
             response = self.llm_service.generate(gaps_prompt, return_json=True, temperature=0.1)
             gaps = json.loads(response)
             return gaps if isinstance(gaps, list) else []
         except Exception as e:
             return []
-    
+
     def _generate_follow_up_queries(self, question: str, gaps: List[str], research_data: List[Dict]) -> str:
         """Generate follow-up queries based on identified gaps."""
         try:
@@ -573,12 +573,12 @@ Identified gaps: {gaps}
 
 Generate a refined research question that addresses these gaps.
 """
-            
+
             response = self.llm_service.generate(query_prompt, temperature=0.1)
             return response.strip()
         except Exception as e:
             return question
-    
+
     def _generate_clarification_questions(self, question: str) -> List[str]:
         """Generate clarification questions for deep research mode."""
         try:
@@ -590,21 +590,21 @@ Question: {question}
 Generate 3-5 specific clarification questions.
 Return as a JSON array of strings.
 """
-            
+
             response = self.llm_service.generate(clarification_prompt, return_json=True, temperature=0.1)
             clarifications = json.loads(response)
             return clarifications if isinstance(clarifications, list) else []
         except Exception as e:
             return []
-    
+
     def _enhance_question_with_context(self, question: str, clarifications: List[str]) -> str:
         """Enhance question with clarification context."""
         if not clarifications:
             return question
-        
+
         context = f"Clarification context: {', '.join(clarifications)}"
         return f"{question}\n\n{context}"
-    
+
     def _synthesize_results(self, question: str, research_data: List[Dict], mode: str) -> str:
         """Synthesize research results into final response."""
         try:
@@ -619,52 +619,52 @@ Research data from all rounds:
 
 Provide a comprehensive, well-structured research response that addresses the original question.
 """
-            
+
             response = self.llm_service.generate(synthesis_prompt, temperature=0.1)
             return response
         except Exception as e:
             return f"Error synthesizing results: {str(e)}"
-    
+
     def _build_research_prompt(self, research_mode: str) -> str:
         """
         Build research prompt with tool context if available.
-        
+
         Args:
             research_mode: Type of research to perform
-            
+
         Returns:
             Complete system prompt string
         """
         base_prompt = self.config["system_prompts"][research_mode]
-        
+
         if self.available_tools:
             tool_context = self._build_tool_context_string()
             return f"{base_prompt}\n\n{tool_context}"
-        
+
         return base_prompt
-    
+
     def _build_tool_context_string(self) -> str:
         """Build tool context string for LLM prompts."""
         if not self.available_tools:
             return ""
-        
+
         context_parts = [
             "AVAILABLE TOOLS:",
             f"You have access to these tools: {', '.join(self.available_tools)}"
         ]
-        
+
         for tool_name in self.available_tools:
             if tool_name in self.tool_descriptions:
                 context_parts.append(f"\n{tool_name}: {self.tool_descriptions[tool_name]}")
-                
+
                 if tool_name in self.tool_usage_examples:
                     context_parts.append(f"  Usage: {self.tool_usage_examples[tool_name]}")
-                
+
                 if tool_name in self.tool_parameters:
                     params = self.tool_parameters[tool_name]
                     param_list = [f"{name}({info.get('type', 'any')})" for name, info in params.items()]
                     context_parts.append(f"  Parameters: {', '.join(param_list)}")
-        
+
         context_parts.extend([
             "\nTOOL USAGE INSTRUCTIONS:",
             "1. If you need to use tools for research, respond with a JSON object containing 'tool_calls'",
@@ -672,17 +672,17 @@ Provide a comprehensive, well-structured research response that addresses the or
             "3. Example format: {\"tool_calls\": [{\"tool\": \"web_search\", \"parameters\": {\"query\": \"search term\"}}]}",
             "4. If no tools are needed, provide your research results directly"
         ])
-        
+
         return "\n".join(context_parts)
-    
+
     def _process_research_response(self, response: str, research_mode: str) -> Dict[str, Any]:
         """
         Process LLM response and handle tool calls if present.
-        
+
         Args:
             response: Raw LLM response string
             research_mode: Type of research being performed
-            
+
         Returns:
             Processed response dictionary
         """
@@ -705,35 +705,35 @@ Provide a comprehensive, well-structured research response that addresses the or
                     }
         except json.JSONDecodeError:
             pass
-        
+
         # No tool calls, return normal response
         return {
             "result": response,
             "research_mode": research_mode,
             "status": "success"
         }
-    
+
     def _execute_research_tools(self, tool_calls: List[Dict[str, Any]], question: str, research_mode: str) -> str:
         """
         Execute research tools and generate final response.
-        
+
         Args:
             tool_calls: List of tool calls to execute
             question: Original research question
             research_mode: Type of research being performed
-            
+
         Returns:
             Final research results
         """
         try:
             tool_results = []
             tools_used = []
-            
+
             # Execute each tool call
             for tool_call in tool_calls:
                 tool_name = tool_call.get("tool")
                 parameters = tool_call.get("parameters", {})
-                
+
                 if tool_name in self.available_tools:
                     # Simulate tool execution (in real implementation, this would call actual tools)
                     result = self._simulate_tool_execution(tool_name, parameters)
@@ -743,7 +743,7 @@ Provide a comprehensive, well-structured research response that addresses the or
                         "result": result
                     })
                     tools_used.append(tool_name)
-            
+
             # Generate final response using tool results
             final_prompt = f"""
 Based on the research question: {question}
@@ -753,25 +753,25 @@ Tool Results:
 
 Please provide a comprehensive research response based on the tool results above.
 """
-            
+
             response = self.llm_service.generate(
                 final_prompt,
                 system_prompt=self.config["system_prompts"][research_mode]
             )
-            
+
             return response
-            
+
         except Exception as e:
             return f"Error executing research tools: {str(e)}"
-    
+
     def _simulate_tool_execution(self, tool_name: str, parameters: Dict[str, Any]) -> str:
         """
         Simulate tool execution (placeholder for actual tool integration).
-        
+
         Args:
             tool_name: Name of the tool to execute
             parameters: Tool parameters
-            
+
         Returns:
             Simulated tool result
         """
@@ -784,17 +784,17 @@ def main():
     if len(sys.argv) != 2:
         print(json.dumps({"error": "Invalid arguments"}))
         sys.exit(1)
-    
+
     try:
         # Parse input from command line
         input_data = json.loads(sys.argv[1])
         method = input_data.get("method")
         parameters = input_data.get("parameters", {})
         tool_context = input_data.get("tool_context", {})
-        
+
         # Create agent instance with tool context
         agent = ResearchAgent(tool_context=tool_context)
-        
+
         # Execute requested method
         if method == "instant_research":
             result = agent.instant_research(parameters.get("question", ""))
@@ -814,7 +814,7 @@ def main():
         else:
             print(json.dumps({"error": f"Unknown method: {method}"}))
             sys.exit(1)
-            
+
     except Exception as e:
         print(json.dumps({"error": str(e)}))
         sys.exit(1)
@@ -840,18 +840,18 @@ Each research mode will have its own workflow implementation:
 # src/research_agent/source_tracker.py
 class SourceTracker:
     """Tracks scraped URLs to prevent duplicates"""
-    
+
     def __init__(self):
         self.used_urls = set()
-    
+
     def is_url_used(self, url: str) -> bool:
         """Check if URL has been previously scraped"""
         return url in self.used_urls
-    
+
     def mark_url_used(self, url: str):
         """Mark URL as used"""
         self.used_urls.add(url)
-    
+
     def get_unused_urls(self, urls: List[str]) -> List[str]:
         """Filter out used URLs from a list"""
         return [url for url in urls if not self.is_url_used(url)]
@@ -867,17 +867,17 @@ from typing import Dict, Any
 
 class TempFileManager:
     """Manages temporary files for research data"""
-    
+
     def __init__(self):
         self.temp_dir = tempfile.mkdtemp(prefix="research_agent_")
         self.files = {}
-    
+
     def create_temp_file(self, name: str, data: Any) -> str:
         """Create a temporary file with data"""
         file_path = os.path.join(self.temp_dir, name)
         # Implementation details
         return file_path
-    
+
     def cleanup(self):
         """Clean up all temporary files"""
         # Implementation details
@@ -959,7 +959,7 @@ interface:
       returns:
         type: "string"
         description: "Direct research results with key facts and essential information"
-    
+
     quick_research:
       description: "Perform enhanced research with context-aware analysis across multiple rounds. Executes in 1-2 minutes with 2 research rounds and 20 sources. Analyzes initial results to improve follow-up queries and provides comprehensive answers with additional context. Ideal for moderate complexity questions requiring some depth."
       parameters:
@@ -970,7 +970,7 @@ interface:
       returns:
         type: "string"
         description: "Enhanced research results with context and detailed insights"
-    
+
     standard_research:
       description: "Conduct comprehensive research with systematic gap analysis and iterative refinement. Executes in 8-15 minutes with 5 research rounds and 50 sources. Identifies information gaps, generates targeted follow-up queries, and synthesizes results from multiple research rounds for thorough coverage. Best for complex topics requiring detailed analysis."
       parameters:
@@ -981,7 +981,7 @@ interface:
       returns:
         type: "string"
         description: "Comprehensive research results with thorough analysis and synthesis"
-    
+
     deep_research:
       description: "Execute exhaustive research with clarification questions and maximum depth analysis. Executes in 20-30 minutes with 12 research rounds and 120 sources. Generates clarification questions to better understand requirements, conducts extensive gap analysis, and provides academic-level comprehensive research with full context and detailed findings. Perfect for research projects requiring exhaustive analysis."
       parameters:
@@ -992,7 +992,7 @@ interface:
       returns:
         type: "string"
         description: "Exhaustive research results with comprehensive analysis and detailed findings"
-    
+
     solve:
       description: "Automatically select the most appropriate research mode based on question complexity, context, and available time. Uses intelligent analysis to determine whether instant (15-30s), quick (1-2min), standard (8-15min), or deep (20-30min) research is needed for optimal results. Considers both research depth requirements and time constraints."
       parameters:

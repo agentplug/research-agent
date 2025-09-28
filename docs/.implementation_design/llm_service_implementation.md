@@ -57,7 +57,7 @@ _shared_llm_service: Optional["CoreLLMService"] = None
 class CoreLLMService:
     """
     LLM service for research agent operations.
-    
+
     Features:
     - Automatic model detection and selection
     - Multi-provider support (Ollama, LM Studio, cloud providers)
@@ -65,11 +65,11 @@ class CoreLLMService:
     - Shared instance management
     - Research-specific optimizations
     """
-    
+
     def __init__(self, model: Optional[str] = None, auto_detect: bool = True):
         """
         Initialize the LLM service.
-        
+
         Args:
             model: Specific model to use (e.g., "ollama:gpt-oss:20b")
             auto_detect: Whether to auto-detect the best model if none specified
@@ -78,7 +78,7 @@ class CoreLLMService:
         self.client_manager = ClientManager()
         self.cache: Dict[str, Any] = {}
         self._model_info: Optional[ModelInfo] = None
-        
+
         # Determine model to use
         if model:
             self.model = model
@@ -89,10 +89,10 @@ class CoreLLMService:
         else:
             self.model = "fallback"
             logger.info("🎯 Using fallback model")
-        
+
         # Initialize client
         self.client = self.client_manager.initialize_client(self.model)
-    
+
     def generate(
         self,
         input_data: str | List[Dict[str, str]],
@@ -104,7 +104,7 @@ class CoreLLMService:
     ) -> str:
         """
         Generate text using the LLM service.
-        
+
         Args:
             input_data: Either a string (single prompt) or list of messages
             system_prompt: Optional system prompt to define AI behavior
@@ -112,22 +112,22 @@ class CoreLLMService:
             temperature: Controls randomness (0.0 = deterministic, 1.0 = creative)
             max_tokens: Maximum number of tokens to generate
             **kwargs: Additional parameters for the LLM
-            
+
         Returns:
             Generated text response from LLM
         """
         if not self.client:
             return self._fallback_response()
-        
+
         try:
             # Prepare request parameters
             request_kwargs = kwargs.copy()
-            
+
             # Set research-optimized defaults
             request_kwargs["temperature"] = temperature
             if max_tokens:
                 request_kwargs["max_tokens"] = max_tokens
-            
+
             # Handle JSON response format for different providers
             if return_json:
                 if self.is_local_model():
@@ -147,7 +147,7 @@ class CoreLLMService:
                 else:
                     # For cloud models, use response_format
                     request_kwargs["response_format"] = {"type": "json_object"}
-            
+
             # Prepare messages
             if isinstance(input_data, str):
                 messages = []
@@ -158,38 +158,38 @@ class CoreLLMService:
                 messages = self._organize_messages(input_data, system_prompt)
             else:
                 raise ValueError("input_data must be string or list")
-            
+
             # Generate response
             response = self.client.chat.completions.create(
                 model=self.client_manager.get_actual_model_name(self.model),
                 messages=messages,
                 **request_kwargs,
             )
-            
+
             if hasattr(response, "choices") and response.choices:
                 return str(response.choices[0].message.content)
             else:
                 logger.error(f"Invalid response format: {response}")
                 return self._fallback_response()
-                
+
         except Exception as e:
             logger.error(f"LLM generation failed: {e}")
             return self._fallback_response()
-    
+
     def generate_research_analysis(
-        self, 
-        question: str, 
-        data: List[Dict[str, Any]], 
+        self,
+        question: str,
+        data: List[Dict[str, Any]],
         analysis_type: str = "comprehensive"
     ) -> str:
         """
         Generate research analysis using specialized prompts.
-        
+
         Args:
             question: Research question
             data: Retrieved data to analyze
             analysis_type: Type of analysis (comprehensive, gap_analysis, synthesis)
-            
+
         Returns:
             Analysis result
         """
@@ -198,12 +198,12 @@ class CoreLLMService:
             "gap_analysis": self._get_gap_analysis_prompt(),
             "synthesis": self._get_synthesis_prompt()
         }
-        
+
         system_prompt = system_prompts.get(analysis_type, system_prompts["comprehensive"])
-        
+
         # Format data for analysis
         formatted_data = self._format_data_for_analysis(data)
-        
+
         prompt = f"""
 Research Question: {question}
 
@@ -212,39 +212,39 @@ Data to Analyze:
 
 Please provide a detailed analysis based on the above data.
 """
-        
+
         return self.generate(prompt, system_prompt=system_prompt, temperature=0.1)
-    
+
     def generate_clarification_questions(
-        self, 
-        question: str, 
+        self,
+        question: str,
         context: Optional[Dict[str, Any]] = None
     ) -> List[str]:
         """
         Generate clarification questions for deep research mode.
-        
+
         Args:
             question: Original research question
             context: Optional context information
-            
+
         Returns:
             List of clarification questions
         """
         system_prompt = self._get_clarification_prompt()
-        
+
         context_str = ""
         if context:
             context_str = f"\nContext: {context}"
-        
+
         prompt = f"""
 Research Question: {question}{context_str}
 
 Generate 3-5 clarification questions to better understand the research requirements.
 Return as a JSON array of strings.
 """
-        
+
         response = self.generate(prompt, system_prompt=system_prompt, return_json=True)
-        
+
         try:
             import json
             questions = json.loads(response)
@@ -255,29 +255,29 @@ Return as a JSON array of strings.
         except (json.JSONDecodeError, TypeError):
             # Fallback: extract questions from text
             return self._extract_questions_from_text(response)
-    
+
     def generate_follow_up_queries(
-        self, 
-        question: str, 
-        gaps: List[str], 
+        self,
+        question: str,
+        gaps: List[str],
         current_data: List[Dict[str, Any]]
     ) -> List[str]:
         """
         Generate follow-up search queries based on identified gaps.
-        
+
         Args:
             question: Original research question
             gaps: List of identified information gaps
             current_data: Currently available data
-            
+
         Returns:
             List of follow-up search queries
         """
         system_prompt = self._get_follow_up_prompt()
-        
+
         gaps_str = "\n".join(f"- {gap}" for gap in gaps)
         data_summary = self._summarize_data(current_data)
-        
+
         prompt = f"""
 Original Question: {question}
 
@@ -290,9 +290,9 @@ Identified Gaps:
 Generate 3-5 specific search queries to address these gaps.
 Return as a JSON array of strings.
 """
-        
+
         response = self.generate(prompt, system_prompt=system_prompt, return_json=True)
-        
+
         try:
             import json
             queries = json.loads(response)
@@ -303,26 +303,26 @@ Return as a JSON array of strings.
         except (json.JSONDecodeError, TypeError):
             # Fallback: extract queries from text
             return self._extract_queries_from_text(response)
-    
+
     def _organize_messages(
-        self, 
-        messages: List[Dict[str, str]], 
+        self,
+        messages: List[Dict[str, str]],
         system_prompt: Optional[str] = None
     ) -> List[Dict[str, str]]:
         """Organize messages for LLM format."""
         organized_messages = []
-        
+
         # Add system prompt if provided
         if system_prompt:
             organized_messages.append({"role": "system", "content": system_prompt})
-        
+
         # Add user messages
         for message in messages:
             if message.get("role") in ["user", "assistant", "system"]:
                 organized_messages.append(message)
-        
+
         return organized_messages
-    
+
     def _format_data_for_analysis(self, data: List[Dict[str, Any]]) -> str:
         """Format data for analysis prompts."""
         formatted_items = []
@@ -330,37 +330,37 @@ Return as a JSON array of strings.
             title = item.get('title', 'Untitled')
             content = item.get('content', '')[:500]  # Truncate content
             source = item.get('source', 'Unknown')
-            
+
             formatted_items.append(f"""
 {i}. {title}
    Source: {source}
    Content: {content}
 """)
-        
+
         return "\n".join(formatted_items)
-    
+
     def _summarize_data(self, data: List[Dict[str, Any]]) -> str:
         """Create a summary of the data for context."""
         if not data:
             return "No data available"
-        
+
         sources = set(item.get('source', 'Unknown') for item in data)
         total_items = len(data)
-        
+
         return f"Total items: {total_items}, Sources: {', '.join(sources)}"
-    
+
     def _extract_questions_from_text(self, text: str) -> List[str]:
         """Extract questions from text response."""
         import re
         questions = re.findall(r'\d+\.\s*(.+?\?)', text)
         return [q.strip() for q in questions if q.strip()]
-    
+
     def _extract_queries_from_text(self, text: str) -> List[str]:
         """Extract search queries from text response."""
         import re
         queries = re.findall(r'\d+\.\s*(.+?)(?:\n|$)', text)
         return [q.strip() for q in queries if q.strip()]
-    
+
     def _get_comprehensive_analysis_prompt(self) -> str:
         """Get system prompt for comprehensive analysis."""
         return """You are a research analyst. Analyze the provided data and provide:
@@ -371,7 +371,7 @@ Return as a JSON array of strings.
 5. Overall assessment of research completeness
 
 Be thorough, objective, and specific in your analysis."""
-    
+
     def _get_gap_analysis_prompt(self) -> str:
         """Get system prompt for gap analysis."""
         return """You are a research analyst specializing in gap analysis. Identify:
@@ -382,7 +382,7 @@ Be thorough, objective, and specific in your analysis."""
 5. Sources that should be consulted
 
 Be specific about what information is missing and why it's important."""
-    
+
     def _get_synthesis_prompt(self) -> str:
         """Get system prompt for synthesis."""
         return """You are a research synthesizer. Combine information from multiple sources to:
@@ -393,7 +393,7 @@ Be specific about what information is missing and why it's important."""
 5. Provide a comprehensive answer
 
 Focus on creating a unified understanding from diverse sources."""
-    
+
     def _get_clarification_prompt(self) -> str:
         """Get system prompt for clarification questions."""
         return """You are a research assistant. Generate clarification questions to better understand research requirements. Focus on:
@@ -404,7 +404,7 @@ Focus on creating a unified understanding from diverse sources."""
 5. Any specific constraints or preferences
 
 Make questions specific and actionable."""
-    
+
     def _get_follow_up_prompt(self) -> str:
         """Get system prompt for follow-up queries."""
         return """You are a research strategist. Generate specific search queries to address identified information gaps. Consider:
@@ -415,31 +415,31 @@ Make questions specific and actionable."""
 5. Related topics that might provide insights
 
 Make queries specific, targeted, and likely to yield relevant results."""
-    
+
     def get_model_info(self) -> ModelInfo:
         """Get information about the current model."""
         if not self._model_info:
             self._model_info = self._create_model_info()
         return self._model_info
-    
+
     def _create_model_info(self) -> ModelInfo:
         """Create ModelInfo object for the current model."""
         return self.model_detector.create_model_info(
             self.model, is_local=self.is_local_model()
         )
-    
+
     def get_current_model(self) -> str:
         """Get the current model identifier."""
         return self.model
-    
+
     def is_local_model(self) -> bool:
         """Check if the current model is a local model."""
         return self.model.startswith(("ollama:", "lmstudio:"))
-    
+
     def _fallback_response(self) -> str:
         """Provide fallback response when LLM is unavailable."""
         return "LLM service not available. Please check your configuration."
-    
+
     def get_service_info(self) -> Dict[str, Any]:
         """Get information about the LLM service."""
         return {
@@ -457,29 +457,29 @@ Make queries specific, targeted, and likely to yield relevant results."""
 
 
 def get_shared_llm_service(
-    model: Optional[str] = None, 
+    model: Optional[str] = None,
     auto_detect: bool = True
 ) -> CoreLLMService:
     """
     Get or create a shared LLM service instance.
-    
+
     This prevents duplicate model detection and reduces initialization overhead.
-    
+
     Args:
         model: Specific model to use
         auto_detect: Whether to auto-detect model
-        
+
     Returns:
         Shared CoreLLMService instance
     """
     global _shared_llm_service
-    
+
     if _shared_llm_service is None:
         logger.debug("Created shared CoreLLMService instance")
         _shared_llm_service = CoreLLMService(model=model, auto_detect=auto_detect)
     else:
         logger.debug("Reusing shared CoreLLMService instance")
-    
+
     return _shared_llm_service
 
 
@@ -509,18 +509,18 @@ logger = logging.getLogger(__name__)
 
 class ClientManager:
     """Manages AISuite client initialization for different providers."""
-    
+
     def __init__(self) -> None:
         """Initialize the client manager."""
         pass
-    
+
     def initialize_client(self, model: str) -> Optional[Any]:
         """
         Initialize AISuite client for the given model.
-        
+
         Args:
             model: Model identifier (e.g., "ollama:gpt-oss:20b")
-            
+
         Returns:
             Initialized AISuite client or None if failed
         """
@@ -529,28 +529,28 @@ class ClientManager:
         except ImportError:
             logger.warning("AISuite not available, using fallback")
             return None
-        
+
         if self._is_ollama_model(model):
             return self._initialize_ollama_client(model, ai)
         elif self._is_lmstudio_model(model):
             return self._initialize_lmstudio_client(model, ai)
         else:
             return self._initialize_cloud_client(model, ai)
-    
+
     def _is_ollama_model(self, model: str) -> bool:
         """Check if model is an Ollama model."""
         return model.startswith("ollama:")
-    
+
     def _is_lmstudio_model(self, model: str) -> bool:
         """Check if model is an LM Studio model."""
         return model.startswith("lmstudio:")
-    
+
     def _initialize_ollama_client(self, model: str, ai: Any) -> Optional[Any]:
         """Initialize AISuite client for Ollama."""
         try:
             # Extract Ollama URL
             ollama_url = os.getenv("OLLAMA_API_URL", "http://localhost:11434")
-            
+
             # Configure provider configs for Ollama
             provider_configs = {
                 "ollama": {
@@ -558,18 +558,18 @@ class ClientManager:
                     "timeout": 300,
                 }
             }
-            
+
             return ai.Client(provider_configs=provider_configs)
         except Exception as e:
             logger.error(f"Failed to initialize Ollama client: {e}")
             return None
-    
+
     def _initialize_lmstudio_client(self, model: str, ai: Any) -> Optional[Any]:
         """Initialize AISuite client for LM Studio."""
         try:
             # Extract LM Studio URL
             lmstudio_url = os.getenv("LMSTUDIO_API_URL", "http://localhost:1234/v1")
-            
+
             # Use OpenAI provider with custom base URL for LM Studio
             provider_configs = {
                 "openai": {
@@ -577,12 +577,12 @@ class ClientManager:
                     "api_key": "lm-studio",  # LM Studio doesn't require real API key
                 }
             }
-            
+
             return ai.Client(provider_configs=provider_configs)
         except Exception as e:
             logger.error(f"Failed to initialize LM Studio client: {e}")
             return None
-    
+
     def _initialize_cloud_client(self, model: str, ai: Any) -> Optional[Any]:
         """Initialize AISuite client for cloud providers."""
         try:
@@ -591,14 +591,14 @@ class ClientManager:
         except Exception as e:
             logger.error(f"Failed to initialize cloud client: {e}")
             return None
-    
+
     def get_actual_model_name(self, model: str) -> str:
         """
         Get the actual model name to use with AISuite.
-        
+
         Args:
             model: Model identifier (e.g., "ollama:gpt-oss:20b")
-            
+
         Returns:
             Actual model name for AISuite (e.g., "gpt-oss:20b")
         """
@@ -630,7 +630,7 @@ from typing import Any, Optional
 
 class ModelConfig:
     """Configuration constants for model selection and scoring."""
-    
+
     # Preferred models for research tasks (prioritize reasoning and analysis)
     PREFERRED_MODELS = [
         "gpt-oss:120b",      # OpenAI open-weight (highest priority)
@@ -642,7 +642,7 @@ class ModelConfig:
         "gemma:latest",      # General purpose models
         "llama3:latest",     # General purpose models
     ]
-    
+
     # Cloud model providers and their models
     CLOUD_MODELS = {
         "openai": ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-3.5-turbo"],
@@ -653,7 +653,7 @@ class ModelConfig:
         "mistral": ["mistral-large-latest", "mistral-small-latest"],
         "cohere": ["command-r-plus", "command-r"],
     }
-    
+
     # Model size scoring (larger models get higher scores for research)
     SIZE_SCORES = {
         "1b": 5,
@@ -669,7 +669,7 @@ class ModelConfig:
         "120b": 80,
         "latest": 30,  # Default for "latest" models
     }
-    
+
     # Model family scoring (research-optimized)
     FAMILY_SCORES = {
         "gpt-oss": 60,      # OpenAI open-weight models
@@ -681,7 +681,7 @@ class ModelConfig:
         "claude": 60,       # Anthropic models
         "gpt": 55,          # OpenAI models
     }
-    
+
     # Quality indicators that boost scores for research
     RESEARCH_QUALITY_INDICATORS = {
         "reasoning": 15,    # Reasoning models are excellent for research
@@ -693,7 +693,7 @@ class ModelConfig:
         "research": 10,     # Research-specific models
         "analysis": 8,      # Analysis-focused models
     }
-    
+
     # Poor model indicators that reduce scores
     POOR_INDICATORS = {
         "embedding": -50,   # Embedding models are not for generation
@@ -703,20 +703,20 @@ class ModelConfig:
         "tiny": -15,        # Very small models
         "test": -20,        # Test models
     }
-    
+
     # Default URLs for local providers
     OLLAMA_URLS = [
         "http://localhost:11434",
         "http://127.0.0.1:11434",
         "http://0.0.0.0:11434",
     ]
-    
+
     LMSTUDIO_URLS = [
         "http://localhost:1234/v1",
         "http://127.0.0.1:1234/v1",
         "http://0.0.0.0:1234/v1",
     ]
-    
+
     # Research-specific model preferences
     RESEARCH_OPTIMIZED_MODELS = [
         "deepseek-r1:70b",  # Excellent for reasoning and analysis
@@ -730,7 +730,7 @@ class ModelConfig:
 @dataclass
 class ModelInfo:
     """Data class for model information."""
-    
+
     name: str
     provider: str
     size: Optional[str]
@@ -765,15 +765,15 @@ logger = logging.getLogger(__name__)
 
 class ModelDetector:
     """Detects and selects the best available LLM model for research tasks."""
-    
+
     def __init__(self):
         """Initialize the model detector."""
         self.config = ModelConfig()
-    
+
     def detect_best_model(self) -> str:
         """
         Detect the best available model for research tasks.
-        
+
         Returns:
             Best available model identifier
         """
@@ -784,7 +784,7 @@ class ModelDetector:
             if best_local:
                 logger.info(f"Selected local model: {best_local}")
                 return best_local
-        
+
         # Check cloud models
         cloud_models = self._detect_cloud_models()
         if cloud_models:
@@ -792,42 +792,42 @@ class ModelDetector:
             if best_cloud:
                 logger.info(f"Selected cloud model: {best_cloud}")
                 return best_cloud
-        
+
         # Fallback
         logger.warning("No suitable model found, using fallback")
         return "fallback"
-    
+
     def _detect_local_models(self) -> List[ModelInfo]:
         """Detect available local models."""
         models = []
-        
+
         # Check Ollama
         ollama_models = self._check_ollama_models()
         models.extend(ollama_models)
-        
+
         # Check LM Studio
         lmstudio_models = self._check_lmstudio_models()
         models.extend(lmstudio_models)
-        
+
         return models
-    
+
     def _detect_cloud_models(self) -> List[ModelInfo]:
         """Detect available cloud models."""
         models = []
-        
+
         # Check each cloud provider
         for provider, model_list in self.config.CLOUD_MODELS.items():
             for model in model_list:
                 if self._check_cloud_model_availability(provider, model):
                     model_info = self._create_cloud_model_info(provider, model)
                     models.append(model_info)
-        
+
         return models
-    
+
     def _check_ollama_models(self) -> List[ModelInfo]:
         """Check available Ollama models."""
         models = []
-        
+
         for url in self.config.OLLAMA_URLS:
             try:
                 response = requests.get(f"{url}/api/tags", timeout=5)
@@ -842,13 +842,13 @@ class ModelDetector:
             except Exception as e:
                 logger.debug(f"Ollama check failed for {url}: {e}")
                 continue
-        
+
         return models
-    
+
     def _check_lmstudio_models(self) -> List[ModelInfo]:
         """Check available LM Studio models."""
         models = []
-        
+
         for url in self.config.LMSTUDIO_URLS:
             try:
                 response = requests.get(f"{url}/v1/models", timeout=5)
@@ -863,15 +863,15 @@ class ModelDetector:
             except Exception as e:
                 logger.debug(f"LM Studio check failed for {url}: {e}")
                 continue
-        
+
         return models
-    
+
     def _check_cloud_model_availability(self, provider: str, model: str) -> bool:
         """Check if a cloud model is available."""
         # This is a simplified check - in practice, you'd check API keys and quotas
         api_key = os.getenv(f"{provider.upper()}_API_KEY")
         return api_key is not None
-    
+
     def _create_ollama_model_info(self, model_name: str, url: str) -> ModelInfo:
         """Create ModelInfo for an Ollama model."""
         score = self._calculate_model_score(f"ollama:{model_name}")
@@ -886,7 +886,7 @@ class ModelDetector:
             url=url,
             research_score=self._calculate_research_score(f"ollama:{model_name}")
         )
-    
+
     def _create_lmstudio_model_info(self, model_name: str, url: str) -> ModelInfo:
         """Create ModelInfo for an LM Studio model."""
         score = self._calculate_model_score(f"lmstudio:{model_name}")
@@ -901,7 +901,7 @@ class ModelDetector:
             url=url,
             research_score=self._calculate_research_score(f"lmstudio:{model_name}")
         )
-    
+
     def _create_cloud_model_info(self, provider: str, model: str) -> ModelInfo:
         """Create ModelInfo for a cloud model."""
         score = self._calculate_model_score(model)
@@ -915,84 +915,84 @@ class ModelDetector:
             is_available=True,
             research_score=self._calculate_research_score(model)
         )
-    
+
     def _select_best_model(self, models: List[ModelInfo]) -> Optional[str]:
         """Select the best model from a list of available models."""
         if not models:
             return None
-        
+
         # Sort by research score (if available) or regular score
         models.sort(key=lambda m: (m.research_score or m.score, m.score), reverse=True)
-        
+
         return models[0].name
-    
+
     def _calculate_model_score(self, model: str) -> int:
         """Calculate a score for a model based on various factors."""
         score = 0
-        
+
         # Base score from size
         size = self._extract_model_size(model)
         if size:
             score += self.config.SIZE_SCORES.get(size, 0)
-        
+
         # Family score
         family = self._extract_model_family(model)
         if family:
             score += self.config.FAMILY_SCORES.get(family, 0)
-        
+
         # Quality indicators
         for indicator, points in self.config.RESEARCH_QUALITY_INDICATORS.items():
             if indicator in model.lower():
                 score += points
-        
+
         # Poor indicators
         for indicator, points in self.config.POOR_INDICATORS.items():
             if indicator in model.lower():
                 score += points
-        
+
         return max(score, 0)  # Ensure non-negative score
-    
+
     def _calculate_research_score(self, model: str) -> int:
         """Calculate a research-specific score for a model."""
         base_score = self._calculate_model_score(model)
-        
+
         # Boost for research-optimized models
         if any(research_model in model for research_model in self.config.RESEARCH_OPTIMIZED_MODELS):
             base_score += 20
-        
+
         # Boost for reasoning models
         if "reasoning" in model.lower() or "r1" in model.lower():
             base_score += 15
-        
+
         return base_score
-    
+
     def _extract_model_size(self, model: str) -> Optional[str]:
         """Extract model size from model name."""
         import re
-        
+
         # Look for size patterns like "7b", "13b", "70b", etc.
         size_match = re.search(r'(\d+)(b|billion)', model.lower())
         if size_match:
             return f"{size_match.group(1)}b"
-        
+
         return None
-    
+
     def _extract_model_family(self, model: str) -> Optional[str]:
         """Extract model family from model name."""
         model_lower = model.lower()
-        
+
         # Check for known families
         for family in self.config.FAMILY_SCORES.keys():
             if family in model_lower:
                 return family
-        
+
         return None
-    
+
     def create_model_info(self, model: str, is_local: bool = False) -> ModelInfo:
         """Create ModelInfo object for a given model."""
         score = self._calculate_model_score(model)
         research_score = self._calculate_research_score(model)
-        
+
         return ModelInfo(
             name=model,
             provider=self._extract_provider(model),
@@ -1003,7 +1003,7 @@ class ModelDetector:
             is_available=True,
             research_score=research_score
         )
-    
+
     def _extract_provider(self, model: str) -> str:
         """Extract provider from model name."""
         if model.startswith("ollama:"):

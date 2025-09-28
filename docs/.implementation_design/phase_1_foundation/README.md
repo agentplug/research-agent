@@ -104,19 +104,19 @@ def _select_mode(self, question: str) -> str:
     """Simple mode selection based on question characteristics"""
     question_length = len(question)
     question_lower = question.lower()
-    
+
     # Deep research indicators
     if any(word in question_lower for word in ["comprehensive", "exhaustive", "detailed analysis", "thorough"]):
         return "deep"
-    
+
     # Standard research indicators
     if any(word in question_lower for word in ["analysis", "research", "study", "investigation"]) or question_length > 100:
         return "standard"
-    
+
     # Quick research indicators
     if any(word in question_lower for word in ["how", "what", "explain", "describe"]) or question_length > 50:
         return "quick"
-    
+
     # Default to instant
     return "instant"
 ```

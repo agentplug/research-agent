@@ -167,3 +167,4 @@ docs/_build/
 
 # Development utilities
 create_pr.sh
+.cursor/

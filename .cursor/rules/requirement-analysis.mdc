@@ -1,6 +1,6 @@
 ---
 description: When need to discuss and brainstorming, understanding customer's needs from original requirements or requests
-globs: 
+globs:
 alwaysApply: false
 ---
 # AI Agent Instructions: Customer Problem Understanding & Solution Design
@@ -104,7 +104,7 @@ Don't just solve the problem - delight the customer with unexpected value:
 ### WOW Factor Examples
 **Problem**: Customer needs to export data to Excel
 - **Basic Solution**: Export button
-- **WOW Solution**: 
+- **WOW Solution**:
   - Auto-scheduled reports sent to their inbox
   - Interactive dashboards they can share with stakeholders
   - Predictive insights based on their data patterns
@@ -309,7 +309,7 @@ This is a discussion between you and user, when user give feedback, question or 
 Just save importance thing, not everytime user chat. Unimportant information should not be save to md to avoid noise and confusion.
 
 Document output should have:
-Document Type: 
+Document Type:
 Author: [Name]
 Date Created: [YYYY-MM-DD]
 Last Updated: [YYYY-MM-DD]

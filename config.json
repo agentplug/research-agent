@@ -1,0 +1,117 @@
+{
+  "ai": {
+    "temperature": 0.1,
+    "max_tokens": null,
+    "timeout": 30
+  },
+  "research": {
+    "max_sources_per_round": 10,
+    "max_rounds": 12,
+    "timeout_per_round": 300
+  },
+  "llm": {
+    "default_provider": "ollama",
+    "fallback_order": ["ollama", "openai", "anthropic"],
+    "mode_preferences": {
+      "instant": ["gpt-3.5-turbo", "claude-3-haiku", "llama3.1:8b"],
+      "quick": ["gpt-4", "claude-3-sonnet", "llama3.1:70b"],
+      "standard": ["gpt-4", "claude-3-opus", "llama3.1:70b"],
+      "deep": ["gpt-4", "claude-3-opus", "llama3.1:70b"]
+    },
+    "providers": {
+      "ollama": {
+        "base_url": "http://localhost:11434",
+        "default_model": "llama3.1:8b",
+        "timeout": 60
+      },
+      "openai": {
+        "api_key": "${OPENAI_API_KEY}",
+        "default_model": "gpt-4",
+        "timeout": 30
+      },
+      "anthropic": {
+        "api_key": "${ANTHROPIC_API_KEY}",
+        "default_model": "claude-3-sonnet",
+        "timeout": 30
+      }
+    },
+    "mode_settings": {
+      "instant": {"temperature": 0.1, "max_tokens": 500},
+      "quick": {"temperature": 0.2, "max_tokens": 1000},
+      "standard": {"temperature": 0.2, "max_tokens": 1500},
+      "deep": {"temperature": 0.3, "max_tokens": 2000}
+    }
+  },
+  "mode_selection": {
+    "enabled": true,
+    "fallback_mode": "instant",
+    "validation_enabled": true,
+    "logging_enabled": true,
+    "complexity_weights": {
+      "comprehensive": 3,
+      "exhaustive": 3,
+      "detailed analysis": 3,
+      "thorough": 2,
+      "analysis": 2,
+      "research": 2,
+      "explain": 1,
+      "describe": 1,
+      "what is": 0
+    },
+    "length_thresholds": {
+      "deep": 50,
+      "standard": 25,
+      "quick": 10,
+      "instant": 0
+    }
+  },
+  "source_tracking": {
+    "enabled": true,
+    "max_sources_per_round": {
+      "instant": 5,
+      "quick": 10,
+      "standard": 25,
+      "deep": 50
+    },
+    "reliability_threshold": 0.5,
+    "domain_reliability": {
+      "wikipedia.org": 0.9,
+      "scholar.google.com": 0.95,
+      "arxiv.org": 0.9,
+      "github.com": 0.8,
+      "stackoverflow.com": 0.7
+    },
+    "url_normalization": {
+      "remove_www": true,
+      "sort_query_params": true,
+      "remove_trailing_slash": true
+    }
+  },
+  "temp_file_management": {
+    "enabled": true,
+    "base_directory": "/tmp/research_agent",
+    "auto_cleanup": true,
+    "max_session_age_hours": 24,
+    "max_cache_age_hours": 48,
+    "max_file_size_mb": 100,
+    "organization": {
+      "research_data": "research_data/",
+      "intermediate_results": "intermediate_results/",
+      "cache": "cache/",
+      "logs": "logs/"
+    }
+  },
+  "system_prompts": {
+    "instant": "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information.",
+    "quick": "You are a research assistant for QUICK research mode. Analyze data and provide enhanced answers with context. Include relevant details and insights.",
+    "standard": "You are a research assistant for STANDARD research mode. Conduct comprehensive research with multiple rounds of analysis. Provide thorough, well-structured responses.",
+    "deep": "You are a research assistant for DEEP research mode. Conduct exhaustive research with clarification and comprehensive analysis. Provide detailed, well-researched responses with full context."
+  },
+  "error_messages": {
+    "instant_research": "Error conducting instant research: {error}",
+    "quick_research": "Error conducting quick research: {error}",
+    "standard_research": "Error conducting standard research: {error}",
+    "deep_research": "Error conducting deep research: {error}",
+    "solve": "Error in research: {error}"
+  }
+}
