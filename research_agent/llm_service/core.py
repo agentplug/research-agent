@@ -63,6 +63,165 @@ class LLMService:
         self.service_type = "real"
         self.initialized = True
     
+    def generate(
+        self,
+        input_data: str | list[dict],
+        system_prompt: str | None = None,
+        return_json: bool = False,
+        temperature: float = 0.0,
+        **kwargs: Any,
+    ) -> str:
+        """
+        Generate response using AISuite with research mode optimization.
+        
+        Args:
+            input_data: Either a string (single prompt) or list of messages
+            system_prompt: Optional system prompt to define AI behavior
+            return_json: If True, request JSON response from AISuite
+            temperature: Controls randomness (0.0 = deterministic, 1.0 = creative)
+            **kwargs: Additional parameters for AISuite
+            
+        Returns:
+            Generated text response from LLM
+        """
+        if not self.client:
+            return self._fallback_response()
+
+        try:
+            # Prepare request parameters
+            request_kwargs = kwargs.copy()
+
+            # Handle JSON response format for different providers
+            if return_json:
+                if self.is_local_model():
+                    # For local models (Ollama/LM Studio), ask for JSON in prompt
+                    if isinstance(input_data, str):
+                        input_data = (
+                            f"{input_data}\n\nPlease respond with valid JSON only, "
+                            "no additional text."
+                        )
+                    elif isinstance(input_data, list):
+                        # Add JSON instruction to the last user message
+                        if input_data and input_data[-1].get("role") == "user":
+                            input_data[-1]["content"] += (
+                                "\n\nPlease respond with valid JSON only, "
+                                "no additional text."
+                            )
+                else:
+                    # For cloud models, use response_format
+                    request_kwargs["response_format"] = {"type": "json_object"}
+
+            # Set temperature parameter
+            request_kwargs["temperature"] = temperature
+
+            if isinstance(input_data, str):
+                # Single prompt - convert to messages format
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": input_data})
+
+                response = self.client.chat.completions.create(
+                    model=self.client_manager.get_actual_model_name(self.model),
+                    messages=messages,
+                    **request_kwargs,
+                )
+                
+                if hasattr(response, "choices") and response.choices:
+                    return str(response.choices[0].message.content)
+                else:
+                    logger.error(f"Invalid response format: {response}")
+                    return self._fallback_response()
+
+            elif isinstance(input_data, list):
+                # Messages - organize into AISuite format
+                messages = self._organize_messages_to_aisuite_format(
+                    input_data, system_prompt
+                )
+
+                response = self.client.chat.completions.create(
+                    model=self.client_manager.get_actual_model_name(self.model),
+                    messages=messages,
+                    **request_kwargs,
+                )
+                
+                if hasattr(response, "choices") and response.choices:
+                    return str(response.choices[0].message.content)
+                else:
+                    logger.error(f"Invalid response format: {response}")
+                    return self._fallback_response()
+            else:
+                raise ValueError("input_data must be string or list")
+                
+        except Exception as e:
+            logger.error(f"AISuite generation failed: {e}")
+            return self._fallback_response()
+    
+    def _get_mode_settings(self, mode: str) -> Dict[str, Any]:
+        """Get mode-specific settings."""
+        mode_settings = {
+            'instant': {'temperature': 0.1, 'max_tokens': 500},
+            'quick': {'temperature': 0.2, 'max_tokens': 1000},
+            'standard': {'temperature': 0.2, 'max_tokens': 1500},
+            'deep': {'temperature': 0.3, 'max_tokens': 2000}
+        }
+        return mode_settings.get(mode, {'temperature': 0.2, 'max_tokens': 1000})
+    
+    def _get_system_prompt(self, mode: str) -> str:
+        """Get system prompt for research mode."""
+        system_prompts = {
+            'instant': "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information.",
+            'quick': "You are a research assistant for QUICK research mode. Analyze data and provide enhanced answers with context. Include relevant details and insights.",
+            'standard': "You are a research assistant for STANDARD research mode. Conduct comprehensive research with multiple rounds of analysis. Provide thorough, well-structured responses.",
+            'deep': "You are a research assistant for DEEP research mode. Conduct exhaustive research with clarification and comprehensive analysis. Provide detailed, well-researched responses with full context."
+        }
+        return system_prompts.get(mode, "You are a helpful research assistant.")
+    
+    def _build_user_prompt(self, query: str, mode: str) -> str:
+        """Build user prompt for research mode."""
+        mode_prompts = {
+            'instant': f"Provide a concise, factual answer to: {query}",
+            'quick': f"Provide enhanced analysis with context for: {query}",
+            'standard': f"Conduct comprehensive research with multiple perspectives on: {query}",
+            'deep': f"Conduct exhaustive research with academic-level analysis on: {query}"
+        }
+        return mode_prompts.get(mode, f"Answer: {query}")
+    
+    def _organize_messages_to_aisuite_format(
+        self, messages: list[dict], system_prompt: str | None = None
+    ) -> list[dict]:
+        """Organize messages for AISuite format."""
+        organized_messages = []
+
+        # Add system prompt if provided
+        if system_prompt:
+            organized_messages.append({"role": "system", "content": system_prompt})
+
+        # Add user messages
+        for message in messages:
+            if message.get("role") in ["user", "assistant", "system"]:
+                organized_messages.append(message)
+
+        return organized_messages
+
+    def is_local_model(self) -> bool:
+        """Check if the current model is a local model."""
+        return self.model.startswith(("ollama:", "lmstudio:"))
+
+    def get_current_model(self) -> str:
+        """Get the current model identifier."""
+        return self.model
+
+    def _fallback_response(self) -> str:
+        """Provide fallback response when LLM is unavailable."""
+        return "AISuite not available"
+
+    def _get_provider_name(self, model: str) -> str:
+        """Get provider name from model identifier."""
+        if ":" in model:
+            return model.split(":")[0]
+        return "unknown"
+
     def generate_response(
         self,
         query: str,
@@ -73,7 +232,7 @@ class LLMService:
         timeout: Optional[float] = None
     ) -> Dict[str, Any]:
         """
-        Generate response using AISuite with research mode optimization.
+        Generate response for research modes using the core generate() method.
         
         Args:
             query: Research query
@@ -106,65 +265,41 @@ class LLMService:
             # Get mode-specific settings
             mode_settings = self._get_mode_settings(mode)
             temperature = temperature or mode_settings['temperature']
-            max_tokens = max_tokens or mode_settings['max_tokens']
             
             # Build mode-specific prompt
             system_prompt = self._get_system_prompt(mode)
-            user_prompt = self._build_user_prompt(query, mode)
             
-            # Generate response using AISuite
-            if self.client:
-                try:
-                    response = self.client.chat.completions.create(
-                        model=self.client_manager.get_actual_model_name(active_model),
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ],
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        timeout=timeout or 30
-                    )
-                    
-                    if hasattr(response, "choices") and response.choices:
-                        content = str(response.choices[0].message.content)
-                        
-                        return format_response(
-                            success=True,
-                            data={
-                                'content': content,
-                                'model': active_model,
-                                'mode': mode,
-                                'query': query,
-                                'provider': self._get_provider_name(active_model),
-                                'metadata': {
-                                    'prompt_tokens': getattr(response.usage, 'prompt_tokens', 0),
-                                    'completion_tokens': getattr(response.usage, 'completion_tokens', 0),
-                                    'total_tokens': getattr(response.usage, 'total_tokens', 0),
-                                    'finish_reason': getattr(response.choices[0], 'finish_reason', 'unknown')
-                                }
-                            },
-                            message=f"Real LLM response generated for {mode} research"
-                        )
-                    else:
-                        logger.error(f"Invalid response format: {response}")
-                        return format_response(
-                            success=False,
-                            message="Invalid response format from LLM provider"
-                        )
-                        
-                except Exception as e:
-                    logger.error(f"AISuite generation failed: {e}")
-                    return format_response(
-                        success=False,
-                        message=f"LLM generation failed: {str(e)}"
-                    )
-            else:
-                logger.error("No AISuite client available")
-                return format_response(
-                    success=False,
-                    message="No LLM client available"
-                )
+            # Prepare kwargs
+            kwargs = {}
+            if max_tokens:
+                kwargs['max_tokens'] = max_tokens
+            if timeout:
+                kwargs['timeout'] = timeout
+            
+            # Generate response using the core generate() method
+            content = self.generate(
+                input_data=query,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                **kwargs
+            )
+            
+            return format_response(
+                success=True,
+                data={
+                    'content': content,
+                    'model': active_model,
+                    'mode': mode,
+                    'query': query,
+                    'provider': self._get_provider_name(active_model),
+                    'metadata': {
+                        'temperature': temperature,
+                        'max_tokens': max_tokens,
+                        'timeout': timeout
+                    }
+                },
+                message=f"Real LLM response generated for {mode} research"
+            )
                 
         except Exception as e:
             return self.error_handler.handle_error(
@@ -172,42 +307,6 @@ class LLMService:
                 {'query': query, 'mode': mode, 'model': model},
                 f"Error generating LLM response: {str(e)}"
             )
-    
-    def _get_mode_settings(self, mode: str) -> Dict[str, Any]:
-        """Get mode-specific settings."""
-        mode_settings = {
-            'instant': {'temperature': 0.1, 'max_tokens': 500},
-            'quick': {'temperature': 0.2, 'max_tokens': 1000},
-            'standard': {'temperature': 0.2, 'max_tokens': 1500},
-            'deep': {'temperature': 0.3, 'max_tokens': 2000}
-        }
-        return mode_settings.get(mode, {'temperature': 0.2, 'max_tokens': 1000})
-    
-    def _get_system_prompt(self, mode: str) -> str:
-        """Get system prompt for research mode."""
-        system_prompts = {
-            'instant': "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information.",
-            'quick': "You are a research assistant for QUICK research mode. Analyze data and provide enhanced answers with context. Include relevant details and insights.",
-            'standard': "You are a research assistant for STANDARD research mode. Conduct comprehensive research with multiple rounds of analysis. Provide thorough, well-structured responses.",
-            'deep': "You are a research assistant for DEEP research mode. Conduct exhaustive research with clarification and comprehensive analysis. Provide detailed, well-researched responses with full context."
-        }
-        return system_prompts.get(mode, "You are a helpful research assistant.")
-    
-    def _build_user_prompt(self, query: str, mode: str) -> str:
-        """Build user prompt for research mode."""
-        mode_prompts = {
-            'instant': f"Provide a concise, factual answer to: {query}",
-            'quick': f"Provide enhanced analysis with context for: {query}",
-            'standard': f"Conduct comprehensive research with multiple perspectives on: {query}",
-            'deep': f"Conduct exhaustive research with academic-level analysis on: {query}"
-        }
-        return mode_prompts.get(mode, f"Answer: {query}")
-    
-    def _get_provider_name(self, model: str) -> str:
-        """Get provider name from model identifier."""
-        if ":" in model:
-            return model.split(":")[0]
-        return "unknown"
     
     def get_available_models(self) -> List[Dict[str, Any]]:
         """Get all available models."""
