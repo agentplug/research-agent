@@ -1,0 +1,146 @@
+name: research-agent
+version: 1.0.0
+description: Deep research agent for AgentHub - comprehensive information gathering with multiple research modes
+author: agentplug
+license: MIT
+repository: https://github.com/agentplug/research-agent
+homepage: https://github.com/agentplug/research-agent
+
+installation:
+  commands:
+    - pip install -e .
+
+interface:
+  instant_research:
+    description: Conduct instant research for quick answers
+    parameters:
+      query:
+        type: string
+        description: Research query
+        required: true
+      context:
+        type: object
+        description: Additional context information
+        required: false
+    returns:
+      type: object
+      description: Research results with response content and metadata
+  
+  quick_research:
+    description: Conduct quick research with enhanced context
+    parameters:
+      query:
+        type: string
+        description: Research query
+        required: true
+      context:
+        type: object
+        description: Additional context information
+        required: false
+    returns:
+      type: object
+      description: Enhanced research results with insights and analysis
+  
+  standard_research:
+    description: Conduct comprehensive multi-round research
+    parameters:
+      query:
+        type: string
+        description: Research query
+        required: true
+      context:
+        type: object
+        description: Additional context information
+        required: false
+    returns:
+      type: object
+      description: Comprehensive research results with detailed analysis
+  
+  deep_research:
+    description: Conduct exhaustive research with thorough analysis
+    parameters:
+      query:
+        type: string
+        description: Research query
+        required: true
+      context:
+        type: object
+        description: Additional context information
+        required: false
+    returns:
+      type: object
+      description: Exhaustive research results with comprehensive analysis
+  
+  solve:
+    description: Solve a problem using appropriate research mode
+    parameters:
+      query:
+        type: string
+        description: Problem query
+        required: true
+      mode:
+        type: string
+        description: Research mode (instant, quick, standard, deep)
+        enum: [instant, quick, standard, deep]
+        required: false
+        default: standard
+      context:
+        type: object
+        description: Additional context information
+        required: false
+    returns:
+      type: object
+      description: Solution results based on selected research mode
+
+capabilities:
+  - instant_research
+  - quick_research
+  - standard_research
+  - deep_research
+  - problem_solving
+  - context_management
+  - error_handling
+  - session_management
+
+requirements:
+  python: ">=3.11"
+  dependencies:
+    - aisuite[openai]>=0.1.7
+    - python-dotenv>=1.0.0
+    - docstring-parser>=0.17.0
+
+configuration:
+  config_file: config.json
+  default_mode: standard
+  timeout: 300
+  max_rounds: 12
+  max_sources_per_round: 10
+
+examples:
+  instant_research:
+    query: "What is artificial intelligence?"
+    context: {}
+  
+  quick_research:
+    query: "How does machine learning work?"
+    context: {"focus": "algorithms"}
+  
+  standard_research:
+    query: "What are the latest developments in AI research?"
+    context: {"year": "2024"}
+  
+  deep_research:
+    query: "Analyze the impact of AI on society and future implications"
+    context: {"perspective": "societal"}
+  
+  solve:
+    query: "How can I implement a neural network?"
+    mode: "standard"
+    context: {"experience_level": "beginner"}
+
+metadata:
+  phase: 1
+  implementation: foundation
+  llm_service: mock
+  testing: unit_tests
+  status: development

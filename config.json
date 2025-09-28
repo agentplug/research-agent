@@ -1,0 +1,25 @@
+{
+  "ai": {
+    "temperature": 0.1,
+    "max_tokens": null,
+    "timeout": 30
+  },
+  "research": {
+    "max_sources_per_round": 10,
+    "max_rounds": 12,
+    "timeout_per_round": 300
+  },
+  "system_prompts": {
+    "instant": "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information. Use tools efficiently to get immediate results.",
+    "quick": "You are a research assistant for QUICK research mode. Analyze data and provide enhanced answers with context. Include relevant details and insights. Use tools to gather additional information for better context.",
+    "standard": "You are a research assistant for STANDARD research mode. Conduct comprehensive research with multiple rounds of analysis. Provide thorough, well-structured responses. Use tools extensively to gather comprehensive information.",
+    "deep": "You are a research assistant for DEEP research mode. Conduct exhaustive research with clarification and comprehensive analysis. Provide detailed, well-researched responses with full context. Use tools extensively and analyze gaps in information."
+  },
+  "error_messages": {
+    "instant_research": "Error conducting instant research: {error}",
+    "quick_research": "Error conducting quick research: {error}",
+    "standard_research": "Error conducting standard research: {error}",
+    "deep_research": "Error conducting deep research: {error}",
+    "solve": "Error in research: {error}"
+  }
+}
