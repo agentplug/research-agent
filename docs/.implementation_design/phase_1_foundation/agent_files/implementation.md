@@ -1,37 +1,8 @@
-# Agent Files Implementation - Phase 1 Foundation
-
-## Overview
-The agent files provide the main entry point and configuration for the research agent, following AgentHub's interface requirements.
+# Agent Files Implementation
 
 ## Files to Create/Modify
 
-### `agent.py` (Project Root)
-- Main agent entry point
-- Command-line interface
-- JSON input/output handling
-- Method routing
-
-### `agent.yaml` (Project Root)
-- Agent metadata and configuration
-- Method definitions
-- Parameter specifications
-- Installation instructions
-
-### `config.json` (Project Root)
-- Runtime configuration
-- AI parameters
-- Research settings
-- System prompts
-
-### `pyproject.toml` (Project Root)
-- Python package configuration
-- Dependencies
-- Build settings
-- Metadata
-
-## Implementation Details
-
-### `agent.py` Structure
+### agent.py (Project Root)
 ```python
 #!/usr/bin/env python3
 """
@@ -43,59 +14,69 @@ import json
 import sys
 import os
 import logging
+import asyncio
 from typing import Dict, Any
 
-# Import our modules
-from research_agent import ResearchAgent
-from llm_service import get_shared_llm_service
+# Import our modular components
+from research_agent.research_agent import ResearchAgent
 
 logger = logging.getLogger(__name__)
 
-class ResearchAgentHub:
-    """Research agent for AgentHub integration."""
-    
-    def __init__(self):
-        """Initialize the research agent."""
-        self.config = self._load_config()
-        self.agent = ResearchAgent()
-
-    def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from config.json file."""
-        # Implementation details...
-
-    def instant_research(self, question: str) -> str:
-        """Instant research mode."""
-        # Implementation details...
-
-    def quick_research(self, question: str) -> str:
-        """Quick research mode."""
-        # Implementation details...
-
-    def standard_research(self, question: str) -> str:
-        """Standard research mode."""
-        # Implementation details...
-
-    def deep_research(self, question: str) -> str:
-        """Deep research mode."""
-        # Implementation details...
-
-    async def solve(self, question: str) -> Dict[str, Any]:
-        """Auto mode selection."""
-        # Implementation details...
-
 def main():
     """Main entry point for agent execution."""
-    # Command-line interface implementation...
+    if len(sys.argv) != 2:
+        print(json.dumps({"error": "Invalid arguments"}))
+        sys.exit(1)
+    
+    try:
+        # Parse input from command line
+        input_data = json.loads(sys.argv[1])
+        method = input_data.get("method")
+        parameters = input_data.get("parameters", {})
+        tool_context = input_data.get("tool_context", {})
+        
+        # Create agent instance with external tools
+        external_tools = tool_context.get("available_tools", [])
+        agent = ResearchAgent(external_tools=external_tools)
+        
+        # Set tool context for the agent
+        agent.tool_context = tool_context
+        
+        # Execute requested method
+        if method == "instant_research":
+            result = agent.instant_research(parameters.get("question", ""))
+            print(json.dumps({"result": result}))
+        elif method == "quick_research":
+            result = agent.quick_research(parameters.get("question", ""))
+            print(json.dumps({"result": result}))
+        elif method == "standard_research":
+            result = agent.standard_research(parameters.get("question", ""))
+            print(json.dumps({"result": result}))
+        elif method == "deep_research":
+            result = agent.deep_research(parameters.get("question", ""))
+            print(json.dumps({"result": result}))
+        elif method == "solve":
+            # Handle async solve method
+            result = asyncio.run(agent.solve(parameters.get("question", "")))
+            print(json.dumps(result))
+        else:
+            print(json.dumps({"error": f"Unknown method: {method}"}))
+            sys.exit(1)
+            
+    except Exception as e:
+        logger.error(f"Error in main: {str(e)}")
+        print(json.dumps({"error": str(e)}))
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
 ```
 
-### `agent.yaml` Structure
+### agent.yaml (Project Root)
 ```yaml
 name: "research-agent"
 version: "1.0.0"
-description: "Intelligent research agent with multiple research modes"
+description: "Intelligent research agent with dynamic tool selection and multi-mode research capabilities"
 author: "agentplug"
 license: "MIT"
 python_version: "3.11+"
@@ -108,12 +89,12 @@ installation:
     - "uv venv .venv"
     - "uv pip install -e ."
     - "uv sync"
-  description: "Install uv and dependencies for the research agent"
+  description: "Install uv (via pip or curl fallback), then install the research agent and its dependencies using uv"
 
 interface:
   methods:
     instant_research:
-      description: "Instant research mode - quick response using LLM-selected tools"
+      description: "Instant research mode - Quick, direct answers in under 30 seconds using 1 round of research"
       parameters:
         question:
           type: "string"
@@ -121,10 +102,10 @@ interface:
           required: true
       returns:
         type: "string"
-        description: "Research results and analysis"
+        description: "Quick research results with direct answers"
     
     quick_research:
-      description: "Quick research mode - enhanced analysis with context-aware tool selection"
+      description: "Quick research mode - Enhanced analysis with context in 1-2 minutes using 2 rounds of research"
       parameters:
         question:
           type: "string"
@@ -132,10 +113,10 @@ interface:
           required: true
       returns:
         type: "string"
-        description: "Enhanced research results with analysis"
+        description: "Enhanced research results with additional context"
     
     standard_research:
-      description: "Standard research mode - comprehensive analysis with multiple rounds"
+      description: "Standard research mode - Comprehensive coverage in 5-15 minutes using 3 rounds of research"
       parameters:
         question:
           type: "string"
@@ -146,7 +127,7 @@ interface:
         description: "Comprehensive research results with thorough analysis"
     
     deep_research:
-      description: "Deep research mode - exhaustive analysis with clarification questions"
+      description: "Deep research mode - Exhaustive analysis with clarification in 15-30 minutes using 5 rounds of research"
       parameters:
         question:
           type: "string"
@@ -157,7 +138,7 @@ interface:
         description: "Exhaustive research results with comprehensive analysis and clarification questions"
     
     solve:
-      description: "Auto mode selection based on question complexity and context"
+      description: "Auto mode selection - Automatically selects the best research mode based on question complexity"
       parameters:
         question:
           type: "string"
@@ -165,12 +146,22 @@ interface:
           required: true
       returns:
         type: "object"
-        description: "Research results with mode information and analysis"
+        description: "Research results with selected mode information"
+        properties:
+          mode:
+            type: "string"
+            description: "Selected research mode"
+          result:
+            type: "string"
+            description: "Research results"
+          status:
+            type: "string"
+            description: "Execution status"
 
-tags: ["research", "ai-assistant", "intelligence", "analysis"]
+tags: ["research", "ai-assistant", "multi-tool", "intelligent-analysis"]
 ```
 
-### `config.json` Structure
+### config.json (Project Root)
 ```json
 {
   "ai": {
@@ -185,14 +176,14 @@ tags: ["research", "ai-assistant", "intelligence", "analysis"]
   },
   "system_prompts": {
     "instant": "You are a research assistant for INSTANT research mode. Provide quick, accurate answers focusing on key facts.",
-    "quick": "You are a research assistant for QUICK research mode. Conduct enhanced research with additional context. Provide thorough, well-structured responses.",
+    "quick": "You are a research assistant for QUICK research mode. Provide enhanced analysis with additional context.",
     "standard": "You are a research assistant for STANDARD research mode. Conduct comprehensive research with multiple rounds of analysis. Provide thorough, well-structured responses.",
     "deep": "You are a research assistant for DEEP research mode. Conduct exhaustive research with clarification and comprehensive analysis. Provide detailed, well-researched responses with full context."
   }
 }
 ```
 
-### `pyproject.toml` Structure
+### pyproject.toml (Project Root)
 ```toml
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -201,8 +192,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "research-agent"
 version = "1.0.0"
-description = "Intelligent research agent with multiple research modes"
-authors = [{name = "agentplug", email = "contact@agentplug.com"}]
+description = "Intelligent research agent with dynamic tool selection"
+authors = [
+    {name = "agentplug", email = "contact@agentplug.com"}
+]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.11"
@@ -214,41 +207,97 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-
 dependencies = [
     "openai>=1.0.0",
     "anthropic>=0.7.0",
     "google-generativeai>=0.3.0",
-    "requests>=2.28.0",
-    "aiohttp>=3.8.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
-    "black>=22.0.0",
-    "flake8>=5.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
     "mypy>=1.0.0",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.urls]
+Homepage = "https://github.com/agentplug/research-agent"
+Repository = "https://github.com/agentplug/research-agent"
+Issues = "https://github.com/agentplug/research-agent/issues"
 
-[tool.setuptools.package-dir]
-"" = "src"
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["research_agent*"]
+
+[tool.setuptools.package-data]
+research_agent = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
 ```
 
-## Testing
-- Command-line interface tests
-- JSON input/output tests
-- Method routing tests
-- Configuration loading tests
-- Error handling tests
+### research_agent/__init__.py (Project Root)
+```python
+"""Research Agent - Intelligent research with dynamic tool selection."""
 
-## Dependencies
-- ResearchAgent module
-- LLM Service module
-- Python 3.11+
-- JSON handling
-- Command-line argument parsing
+from .research_agent import ResearchAgent
+from .base_agent import BaseAgent
+from .llm_service import CoreLLMService, get_shared_llm_service
+
+__version__ = "1.0.0"
+__all__ = ['ResearchAgent', 'BaseAgent', 'CoreLLMService', 'get_shared_llm_service']
+```
+
+## Project Structure
+```
+research-agent/
+├── agent.py                    # Main agent entry point
+├── agent.yaml                  # Agent configuration
+├── config.json                 # Runtime configuration
+├── pyproject.toml             # Python packaging
+├── README.md                  # Project documentation
+├── research_agent/            # Main module
+│   ├── __init__.py
+│   ├── base_agent/            # BaseAgent module
+│   │   ├── __init__.py
+│   │   ├── core.py
+│   │   ├── context_manager.py
+│   │   ├── error_handler.py
+│   │   └── utils.py
+│   ├── research_agent/        # ResearchAgent module
+│   │   ├── __init__.py
+│   │   ├── core.py
+│   │   ├── research_methods.py
+│   │   └── tool_integration.py
+│   └── llm_service/           # LLM service module
+│       ├── __init__.py
+│       ├── core.py
+│       ├── providers.py
+│       └── mock_service.py
+└── tests/                     # Test files
+    ├── test_base_agent.py
+    ├── test_research_agent.py
+    └── test_llm_service.py
+```
+
+## Testing Commands
+```bash
+# Test via AgentHub
+ah.load_agent("agentplug/research-agent")
+
+# Test individual methods
+python agent.py '{"method": "instant_research", "parameters": {"question": "What is AI?"}}'
+python agent.py '{"method": "quick_research", "parameters": {"question": "Latest AI developments"}}'
+python agent.py '{"method": "standard_research", "parameters": {"question": "AI impact on society"}}'
+python agent.py '{"method": "deep_research", "parameters": {"question": "Future of AI"}}'
+python agent.py '{"method": "solve", "parameters": {"question": "What is machine learning?"}}'
+```
