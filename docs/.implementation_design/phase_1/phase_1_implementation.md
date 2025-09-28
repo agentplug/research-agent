@@ -1258,8 +1258,8 @@ class ResearchAgent(BaseAgent):
                 if round_results:
                     research_data.extend(round_results)
                 
-                # Check if research is complete
-                if self._is_research_complete(question, research_data, mode):
+                # Check if research is complete (from the combined call)
+                if hasattr(self, '_current_round_complete') and self._current_round_complete:
                     break
             
             # Generate final response
@@ -1281,8 +1281,8 @@ class ResearchAgent(BaseAgent):
             if research_data:
                 current_context = f"\nResearch progress from previous rounds:\n{chr(10).join(research_data)}"
             
-            # First, analyze what has been done and what's missing
-            analysis_prompt = f"""
+            # Combined analysis and tool selection in one call
+            combined_prompt = f"""
 Research question: {question}
 Research mode: {mode}
 Current round: {iteration + 1}
@@ -1290,58 +1290,58 @@ Current round: {iteration + 1}
 Research progress from previous rounds:
 {current_context if current_context else "No previous research data - this is the first round."}
 
-Analyze the current research progress and identify:
-1. What information has been gathered so far?
-2. What information is still missing or incomplete?
-3. What are the next steps needed to complete this research?
-4. What specific gaps need to be filled?
-
-Based on this analysis, what should be the focus for this round?
-"""
-            
-            analysis_response = self.llm_service.generate(
-                analysis_prompt,
-                system_prompt="You are a research analyst. Analyze current progress and identify what needs to be done next.",
-                temperature=0.0
-            )
-            
-            # Now select tools based on the analysis
-            selection_prompt = f"""
-Research question: {question}
-Research mode: {mode}
-Current round: {iteration + 1}
-
-Research progress analysis:
-{analysis_response}
-
 Available tools:
 {tool_list}
 
-Based on the analysis above, select the tools that would best address the identified gaps and next steps. Consider:
+Analyze the current research progress and provide a JSON response with:
+1. analysis: What information has been gathered so far, what's missing, and what are the next steps
+2. is_complete: Whether the research is complete based on the mode requirements
+3. selected_tools: List of tools to use for this round (empty list if no tools needed)
+
+For is_complete, consider:
+- For instant research: Is there a quick, direct answer available?
+- For quick research: Is there sufficient context for enhanced analysis?
+- For standard research: Is there comprehensive coverage of the topic?
+- For deep research: Is there exhaustive analysis with full context?
+
+For selected_tools, consider:
 - Which tools can provide the missing information?
 - Which tools can fill the identified gaps?
 - Which tools can help with the next steps?
 - You can reuse tools from previous rounds if they would provide additional value
 - You can select different tools if they would provide better coverage
 
-Return only the tool names separated by commas, no explanations.
-If no tools are needed for this round, return "NONE".
+Return only a valid JSON response in this format:
+{{
+    "analysis": "detailed analysis of current progress and gaps",
+    "is_complete": true/false,
+    "selected_tools": ["tool1", "tool2"] or []
+}}
 """
             
-            selected_tools_response = self.llm_service.generate(
-                selection_prompt,
-                system_prompt="You are a research coordinator. Select tools based on research gaps and next steps.",
+            combined_response = self.llm_service.generate(
+                combined_prompt,
+                system_prompt="You are a research coordinator. Analyze progress and select tools. Return only valid JSON.",
                 temperature=0.0
             )
             
-            if "NONE" in selected_tools_response.upper():
-                return []
-            
-            # Parse the response to get tool names
-            selected_tools = []
-            for tool_name in available_tools:
-                if tool_name.lower() in selected_tools_response.lower():
-                    selected_tools.append(tool_name)
+            # Parse the JSON response
+            try:
+                import json
+                response_data = json.loads(combined_response)
+                analysis = response_data.get("analysis", "")
+                is_complete = response_data.get("is_complete", False)
+                selected_tools = response_data.get("selected_tools", [])
+                
+                # Store completion status for later use
+                self._current_round_complete = is_complete
+                
+            except json.JSONDecodeError:
+                logger.error(f"Failed to parse JSON response: {combined_response}")
+                # Fallback: treat as incomplete and no tools selected
+                analysis = "Failed to parse analysis response"
+                is_complete = False
+                selected_tools = []
             
             return selected_tools
             
@@ -1358,36 +1358,6 @@ If no tools are needed for this round, return "NONE".
             "deep": 5
         }.get(mode, 2)
     
-    def _is_research_complete(self, question: str, research_data: List[str], mode: str) -> bool:
-        """Use LLM to determine if research is complete based on current data."""
-        try:
-            completion_prompt = f"""
-Research question: {question}
-Research mode: {mode}
-
-Current research data:
-{chr(10).join(research_data)}
-
-Based on the research mode and current data, determine if the research is complete:
-- For instant research: Is there a quick, direct answer available?
-- For quick research: Is there sufficient context for enhanced analysis?
-- For standard research: Is there comprehensive coverage of the topic?
-- For deep research: Is there exhaustive analysis with full context?
-
-Answer with "YES" if research is complete, "NO" if more research is needed.
-"""
-            
-            completion_response = self.llm_service.generate(
-                completion_prompt,
-                system_prompt="You are a research completion evaluator. Determine if research objectives are met.",
-                temperature=0.0
-            )
-            
-            return "YES" in completion_response.upper()
-            
-        except Exception as e:
-            logger.error(f"Error in research completion check: {str(e)}")
-            return True  # Default to complete to avoid infinite loops
     
     def _generate_final_response(self, question: str, research_data: List[str], mode: str) -> str:
         """Generate final response based on research data and mode."""
