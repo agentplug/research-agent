@@ -81,6 +81,8 @@ Original Query: {original_query}
 Previous Research:
 {research_summary}
 
+IMPORTANT: Only mark goal_reached as true if the research COMPLETELY answers the original query with no gaps or missing information.
+
 Return JSON: {{"analysis": "analysis of the research results", "goal_reached": True/False, "next_query": "specific follow-up query"}}"""
 
         analysis_response = self.llm_service.generate(
