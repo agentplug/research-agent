@@ -80,7 +80,7 @@ class ResearchAgent(BaseAgent):
         }
     
     def _execute_dynamic_research(self, question: str, mode: str) -> str:
-        """Execute dynamic research with iterative tool selection based on results."""
+        """Execute dynamic research with LLM deciding tools for each round."""
         try:
             tools_info = self._get_available_tools_info()
             available_tools = tools_info["available_tools"]
@@ -90,36 +90,25 @@ class ResearchAgent(BaseAgent):
             
             # Initialize research state
             research_data = []
-            used_tools = set()
             max_iterations = self._get_max_iterations_for_mode(mode)
             
-            # Initial tool selection
-            initial_tools = self._select_initial_tools(question, mode, available_tools)
-            
             for iteration in range(max_iterations):
-                # Select tools for this iteration
-                if iteration == 0:
-                    # First iteration: use initial tools
-                    tools_to_use = initial_tools
-                else:
-                    # Subsequent iterations: LLM decides if more tools are needed
-                    tools_to_use = self._select_additional_tools(
-                        question, mode, research_data, available_tools, used_tools
-                    )
+                # LLM decides which tools to use for this round
+                tools_to_use = self._select_tools_for_round(
+                    question, mode, research_data, available_tools, iteration
+                )
                 
                 if not tools_to_use:
-                    break  # No more tools needed
+                    break  # No tools selected for this round
                 
-                # Execute tools for this iteration
-                iteration_results = []
+                # Execute tools for this round
+                round_results = []
                 for tool_name in tools_to_use:
-                    if tool_name not in used_tools:
-                        tool_result = self._call_tool(tool_name, {"query": question})
-                        iteration_results.append(f"{tool_name}: {tool_result}")
-                        used_tools.add(tool_name)
+                    tool_result = self._call_tool(tool_name, {"query": question})
+                    round_results.append(f"{tool_name}: {tool_result}")
                 
-                if iteration_results:
-                    research_data.extend(iteration_results)
+                if round_results:
+                    research_data.extend(round_results)
                 
                 # Check if research is complete
                 if self._is_research_complete(question, research_data, mode):
@@ -131,6 +120,63 @@ class ResearchAgent(BaseAgent):
         except Exception as e:
             return f"Error in dynamic research: {str(e)}"
     
+    def _select_tools_for_round(self, question: str, mode: str, research_data: List[str], 
+                               available_tools: List[str], iteration: int) -> List[str]:
+        """Use LLM to decide which tools to use for this specific round."""
+        try:
+            tools_info = self._get_available_tools_info()
+            tool_descriptions = tools_info["tool_descriptions"]
+            tool_list = "\n".join([f"- {tool}: {desc}" for tool, desc in tool_descriptions.items()])
+            
+            # Create context about current research state
+            current_context = ""
+            if research_data:
+                current_context = f"\nCurrent research data from previous rounds:\n{chr(10).join(research_data)}"
+            
+            selection_prompt = f"""
+Research question: {question}
+Research mode: {mode}
+Current round: {iteration + 1}
+
+Available tools:
+{tool_list}
+{current_context}
+
+Based on the research question, mode, current round, and existing research data, decide which tools to use for this round. Consider:
+- What information is still needed to complete the research?
+- Which tools can provide the most relevant data for this round?
+- You can reuse the same tools from previous rounds if they would provide additional value
+- You can select different tools if they would provide better coverage
+- For instant research: Focus on 1 tool that provides quick answers
+- For quick research: Use 1-2 tools for enhanced context
+- For standard research: Use 2-3 tools for comprehensive coverage
+- For deep research: Use multiple tools for exhaustive analysis
+
+Return only the tool names separated by commas, no explanations.
+If no tools are needed for this round, return "NONE".
+"""
+            
+            selected_tools_response = self.llm_service.generate(
+                selection_prompt,
+                system_prompt="You are a research coordinator. Decide which tools to use for each research round based on current progress.",
+                temperature=0.1
+            )
+            
+            if "NONE" in selected_tools_response.upper():
+                return []
+            
+            # Parse the response to get tool names
+            selected_tools = []
+            for tool_name in available_tools:
+                if tool_name.lower() in selected_tools_response.lower():
+                    selected_tools.append(tool_name)
+            
+            return selected_tools
+            
+        except Exception as e:
+            logger.error(f"Error in round tool selection: {str(e)}")
+            return []
+    
     def _get_max_iterations_for_mode(self, mode: str) -> int:
         """Get maximum iterations based on research mode."""
         return {
@@ -139,106 +185,6 @@ class ResearchAgent(BaseAgent):
             "standard": 3,
             "deep": 5
         }.get(mode, 2)
-    
-    def _select_initial_tools(self, question: str, mode: str, available_tools: List[str]) -> List[str]:
-        """Select initial tools for the first iteration."""
-        try:
-            tools_info = self._get_available_tools_info()
-            tool_descriptions = tools_info["tool_descriptions"]
-            tool_list = "\n".join([f"- {tool}: {desc}" for tool, desc in tool_descriptions.items()])
-            
-            selection_prompt = f"""
-Research question: {question}
-Research mode: {mode}
-
-Available tools:
-{tool_list}
-
-Select the initial tools to start research. Consider:
-- For instant research: Select 1 tool that can provide quick, direct answers
-- For quick research: Select 1-2 tools that can provide good initial coverage
-- For standard research: Select 2-3 tools that can provide comprehensive initial coverage
-- For deep research: Select 3-4 tools that can provide thorough initial coverage
-
-Return only the tool names separated by commas, no explanations.
-"""
-            
-            selected_tools_response = self.llm_service.generate(
-                selection_prompt,
-                system_prompt="You are a tool selection expert. Select the best initial tools for research.",
-                temperature=0.1
-            )
-            
-            # Parse the response to get tool names
-            selected_tools = []
-            for tool_name in available_tools:
-                if tool_name.lower() in selected_tools_response.lower():
-                    selected_tools.append(tool_name)
-            
-            # Fallback: if no tools selected, use first available tool
-            if not selected_tools:
-                selected_tools = [available_tools[0]]
-            
-            return selected_tools
-            
-        except Exception as e:
-            logger.error(f"Error in initial tool selection: {str(e)}")
-            return [available_tools[0]] if available_tools else []
-    
-    def _select_additional_tools(self, question: str, mode: str, research_data: List[str], 
-                               available_tools: List[str], used_tools: set) -> List[str]:
-        """Use LLM to decide if additional tools are needed based on current research data."""
-        try:
-            tools_info = self._get_available_tools_info()
-            tool_descriptions = tools_info["tool_descriptions"]
-            
-            # Get unused tools
-            unused_tools = [tool for tool in available_tools if tool not in used_tools]
-            if not unused_tools:
-                return []  # No more tools available
-            
-            tool_list = "\n".join([f"- {tool}: {desc}" for tool, desc in tool_descriptions.items() 
-                                 if tool in unused_tools])
-            
-            decision_prompt = f"""
-Research question: {question}
-Research mode: {mode}
-
-Current research data:
-{chr(10).join(research_data)}
-
-Available unused tools:
-{tool_list}
-
-Based on the current research data, decide if additional tools are needed to complete the research. Consider:
-- Are there information gaps that other tools could fill?
-- Would additional tools provide different perspectives or data sources?
-- Is the current data sufficient for the research mode?
-
-If additional tools are needed, return the tool names separated by commas.
-If no additional tools are needed, return "NONE".
-"""
-            
-            decision_response = self.llm_service.generate(
-                decision_prompt,
-                system_prompt="You are a research coordinator. Decide if additional tools are needed based on current research data.",
-                temperature=0.1
-            )
-            
-            if "NONE" in decision_response.upper():
-                return []
-            
-            # Parse the response to get tool names
-            selected_tools = []
-            for tool_name in unused_tools:
-                if tool_name.lower() in decision_response.lower():
-                    selected_tools.append(tool_name)
-            
-            return selected_tools
-            
-        except Exception as e:
-            logger.error(f"Error in additional tool selection: {str(e)}")
-            return []
     
     def _is_research_complete(self, question: str, research_data: List[str], mode: str) -> bool:
         """Use LLM to determine if research is complete based on current data."""
