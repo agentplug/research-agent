@@ -60,14 +60,33 @@ class ToolAwareResearchWorkflows(ResearchWorkflows):
         Returns:
             First round result with tool integration
         """
+        # Enhance query for better search results if it's about current information
+        enhanced_query = query
+        if (
+            "current" in query.lower()
+            or "now" in query.lower()
+            or "today" in query.lower()
+        ):
+            # Automatically add temporal context when user asks about "current" status
+            enhanced_query = f'{query} 2025 OR "as of 2025" OR "in 2025"'
+
         # Build system prompt with tool context
         system_prompt = self._build_tool_aware_system_prompt(
             query, mode, intention_paragraph
         )
 
+        # Add temporal context to the input for better tool call generation
+        input_with_context = query
+        if (
+            "current" in query.lower()
+            or "now" in query.lower()
+            or "today" in query.lower()
+        ):
+            input_with_context = f"{query}\n\nNote: When searching for 'current' information, include temporal context like '2025' or 'as of 2025' to get the most recent and relevant results."
+
         # Generate response
         content = self.llm_service.generate(
-            input_data=query,
+            input_data=input_with_context,
             system_prompt=system_prompt,
             temperature=0.0,
         )
@@ -88,7 +107,9 @@ class ToolAwareResearchWorkflows(ResearchWorkflows):
             ]
 
             # Enhance content with tool results
-            enhanced_content = self._enhance_content_with_tools(content, tool_results)
+            enhanced_content = self._enhance_content_with_tools(
+                content, tool_results, query
+            )
             content = enhanced_content
 
         return {
@@ -193,7 +214,9 @@ class ToolAwareResearchWorkflows(ResearchWorkflows):
             ]
 
             # Enhance content with tool results
-            enhanced_content = self._enhance_content_with_tools(content, tool_results)
+            enhanced_content = self._enhance_content_with_tools(
+                content, tool_results, query
+            )
             content = enhanced_content
 
         return {
@@ -226,10 +249,10 @@ class ToolAwareResearchWorkflows(ResearchWorkflows):
 
         today = date.today()
         system_prompts = {
-            "instant": f"Today's date: {today}. When users ask about 'current' information, interpret this as referring to {today} (September 2025). Always include relevant temporal context in search queries. Provide quick, accurate answers. Focus on key facts.",
-            "quick": f"Today's date: {today}. When users ask about 'current' information, interpret this as referring to {today} (September 2025). Always include relevant temporal context in search queries. Provide enhanced analysis with context and examples.",
-            "standard": f"Today's date: {today}. When users ask about 'current' information, interpret this as referring to {today} (September 2025). Always include relevant temporal context in search queries. Conduct comprehensive research with multiple perspectives.",
-            "deep": f"Today's date: {today}. When users ask about 'current' information, interpret this as referring to {today} (September 2025). Always include relevant temporal context in search queries. Conduct exhaustive research with academic-level analysis.",
+            "instant": f"Today's date: {today}. When users ask about 'current' information, interpret this as referring to {today} (September 2025). CRITICAL: When generating tool calls for 'current' queries, ALWAYS include temporal context like '2025', 'as of 2025', or 'in 2025' in the search query. Provide quick, accurate answers. Focus on key facts.",
+            "quick": f"Today's date: {today}. When users ask about 'current' information, interpret this as referring to {today} (September 2025). CRITICAL: When generating tool calls for 'current' queries, ALWAYS include temporal context like '2025', 'as of 2025', or 'in 2025' in the search query. Provide enhanced analysis with context and examples.",
+            "standard": f"Today's date: {today}. When users ask about 'current' information, interpret this as referring to {today} (September 2025). CRITICAL: When generating tool calls for 'current' queries, ALWAYS include temporal context like '2025', 'as of 2025', or 'in 2025' in the search query. Conduct comprehensive research with multiple perspectives.",
+            "deep": f"Today's date: {today}. When users ask about 'current' information, interpret this as referring to {today} (September 2025). CRITICAL: When generating tool calls for 'current' queries, ALWAYS include temporal context like '2025', 'as of 2025', or 'in 2025' in the search query. Conduct exhaustive research with academic-level analysis.",
         }
 
         base_prompt = system_prompts.get(mode, "You are a helpful research assistant.")
@@ -365,10 +388,13 @@ If tools could help fill gaps, suggest their use in your analysis and provide sp
 """
 
     def _enhance_content_with_tools(
-        self, original_content: str, tool_results: List[Dict[str, Any]]
+        self,
+        original_content: str,
+        tool_results: List[Dict[str, Any]],
+        original_query: str = "",
     ) -> str:
         """
-        Enhance content with tool results.
+        Enhance content with tool results by using LLM to process them.
 
         Args:
             original_content: Original LLM content
@@ -394,8 +420,8 @@ If tools could help fill gaps, suggest their use in your analysis and provide sp
                             f"Web search results for '{tool_result.get('query', '')}':"
                         )
                         for i, search_result in enumerate(
-                            search_results[:3], 1
-                        ):  # Limit to 3 results
+                            search_results[:10], 1
+                        ):  # Limit to 10 results to capture more relevant information
                             tool_summary.append(
                                 f"{i}. {search_result.get('title', 'No title')}"
                             )
@@ -416,10 +442,66 @@ If tools could help fill gaps, suggest their use in your analysis and provide sp
                     content = tool_result.get("content", "")
                     tool_summary.append(f"Document content: {content}")
 
-        # Combine original content with tool results
+        # If we have tool results, use LLM to process them and generate a proper answer
         if tool_summary:
-            enhanced_content = f"{original_content}\n\n--- TOOL RESULTS ---\n{chr(10).join(tool_summary)}"
-            return enhanced_content
+            tool_results_text = "\n".join(tool_summary)
+
+            # Use the provided original query or extract from tool call
+            if not original_query:
+                original_query = "the research question"
+                if tool_results and tool_results[0].get("tool_name") == "web_search":
+                    original_query = (
+                        tool_results[0]
+                        .get("result", {})
+                        .get("query", "the research question")
+                    )
+
+            # Use LLM to process tool results and generate final answer
+            from datetime import date
+
+            today = date.today()
+
+            system_prompt = f"""You are a helpful research assistant. You have been provided with tool results that contain information relevant to a research question.
+
+IMPORTANT: Today's date is {today} (September 2025). When analyzing information about "current" status, prioritize the most recent and accurate information available.
+
+Your task is to analyze the tool results and provide a clear, accurate, and comprehensive answer to the research question based on the information found.
+
+Guidelines:
+1. Use the tool results to answer the research question directly and clearly
+2. Pay special attention to dates and temporal context - prioritize information that reflects the current status as of {today}
+3. If there are conflicting dates or information, prioritize in this order:
+   - Official government sources (.gov domains, whitehouse.gov, usa.gov)
+   - Recent news from reputable sources (AP, Reuters, PBS, major news outlets)
+   - Academic sources (.edu domains)
+   - International news sources (but verify with US sources)
+   - Other sources
+4. For questions about "current" status, look for the most recent information and cross-reference multiple sources
+5. If sources conflict, mention the conflict and explain which source you're prioritizing and why
+6. For US presidential questions, prioritize sources that explicitly state "current president" or "as of [date]"
+7. **CRITICAL**: If multiple sources explicitly state the same person as "current president" or "US President" with recent dates (2025), this is strong evidence
+8. **CRITICAL**: Look for phrases like "Current US President [Name]" or "US President [Name]" in recent articles (2025)
+9. Cite specific information from the tool results when relevant
+10. If the tool results don't contain enough information, say so
+11. Provide a concise but complete answer
+12. Focus on facts and avoid speculation
+13. For questions about "current" status, ensure your answer reflects the present time ({today})
+
+Tool Results:
+{tool_results_text}
+
+Please provide a clear answer to the research question based on the tool results above, paying special attention to current status and recent information. Look for explicit statements about "current president" or "US President" in recent sources.
+
+IMPORTANT: If you find multiple sources that explicitly state the same person as "current president" or "US President" with recent dates (2025), this is definitive evidence. Do not be overly cautious - if the evidence is clear and consistent, state it confidently."""
+
+            # Generate final answer using LLM
+            final_answer = self.llm_service.generate(
+                input_data=f"Research question: {original_query}\n\nTool results:\n{tool_results_text}\n\nNote: If the search results contain conflicting information about current status, prioritize official government sources (.gov) and recent news from reputable sources. For questions about 'current' status, focus on the most recent and authoritative information available.",
+                system_prompt=system_prompt,
+                temperature=0.0,
+            )
+
+            return final_answer
 
         return original_content
 
