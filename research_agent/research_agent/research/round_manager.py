@@ -13,7 +13,7 @@ class RoundManager:
         """Build a summary of previous research results."""
         return "\n".join(
             [
-                f"Round {r['round']}:\nTried Query: {r['query']}\nReceived Answer: {r['content']}..."
+                f"Round {r['round']}:\nTried Query: {r['query']}\nReceived Answer: {r['content']}"
                 for r in previous_results
             ]
         )

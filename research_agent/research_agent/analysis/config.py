@@ -28,12 +28,14 @@ class ModeConfig:
     }
 
     SYSTEM_PROMPTS = {
-        "quick": "You are a research analyst specializing in quick gap analysis and efficient research evaluation.",
-        "standard": "You are a research analyst specializing in comprehensive gap analysis and research completeness evaluation.",
-        "deep": "You are a research analyst specializing in exhaustive gap analysis and academic-level research evaluation.",
+        "instant": "You are a quick research evaluator. Focus on basic completeness and direct answers.",
+        "quick": "You are a research analyst specializing in enhanced analysis with context and examples.",
+        "standard": "You are a research analyst specializing in comprehensive gap analysis and multi-perspective evaluation.",
+        "deep": "You are a research analyst specializing in exhaustive academic-level gap analysis and scholarly evaluation.",
     }
 
     FOLLOWUP_INSTRUCTIONS = {
+        "instant": "Provide a quick, direct answer focusing on key facts.",
         "quick": "Provide enhanced analysis with context and examples.",
         "standard": "Conduct comprehensive research with multiple perspectives.",
         "deep": "Conduct exhaustive research with academic-level analysis.",
