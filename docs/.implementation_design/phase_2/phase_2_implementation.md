@@ -122,7 +122,7 @@ class ResearchAgent(BaseAgent):
     
     def _select_tools_for_round(self, question: str, mode: str, research_data: List[str], 
                                available_tools: List[str], iteration: int) -> List[str]:
-        """Use LLM to decide which tools to use for this specific round."""
+        """Use LLM to analyze research progress and decide what to do next."""
         try:
             tools_info = self._get_available_tools_info()
             tool_descriptions = tools_info["tool_descriptions"]
@@ -131,26 +131,50 @@ class ResearchAgent(BaseAgent):
             # Create context about current research state
             current_context = ""
             if research_data:
-                current_context = f"\nCurrent research data from previous rounds:\n{chr(10).join(research_data)}"
+                current_context = f"\nResearch progress from previous rounds:\n{chr(10).join(research_data)}"
             
+            # First, analyze what has been done and what's missing
+            analysis_prompt = f"""
+Research question: {question}
+Research mode: {mode}
+Current round: {iteration + 1}
+
+Research progress from previous rounds:
+{current_context if current_context else "No previous research data - this is the first round."}
+
+Analyze the current research progress and identify:
+1. What information has been gathered so far?
+2. What information is still missing or incomplete?
+3. What are the next steps needed to complete this research?
+4. What specific gaps need to be filled?
+
+Based on this analysis, what should be the focus for this round?
+"""
+            
+            analysis_response = self.llm_service.generate(
+                analysis_prompt,
+                system_prompt="You are a research analyst. Analyze current progress and identify what needs to be done next.",
+                temperature=0.1
+            )
+            
+            # Now select tools based on the analysis
             selection_prompt = f"""
 Research question: {question}
 Research mode: {mode}
 Current round: {iteration + 1}
 
+Research progress analysis:
+{analysis_response}
+
 Available tools:
 {tool_list}
-{current_context}
 
-Based on the research question, mode, current round, and existing research data, decide which tools to use for this round. Consider:
-- What information is still needed to complete the research?
-- Which tools can provide the most relevant data for this round?
-- You can reuse the same tools from previous rounds if they would provide additional value
+Based on the analysis above, select the tools that would best address the identified gaps and next steps. Consider:
+- Which tools can provide the missing information?
+- Which tools can fill the identified gaps?
+- Which tools can help with the next steps?
+- You can reuse tools from previous rounds if they would provide additional value
 - You can select different tools if they would provide better coverage
-- For instant research: Focus on 1 tool that provides quick answers
-- For quick research: Use 1-2 tools for enhanced context
-- For standard research: Use 2-3 tools for comprehensive coverage
-- For deep research: Use multiple tools for exhaustive analysis
 
 Return only the tool names separated by commas, no explanations.
 If no tools are needed for this round, return "NONE".
@@ -158,7 +182,7 @@ If no tools are needed for this round, return "NONE".
             
             selected_tools_response = self.llm_service.generate(
                 selection_prompt,
-                system_prompt="You are a research coordinator. Decide which tools to use for each research round based on current progress.",
+                system_prompt="You are a research coordinator. Select tools based on research gaps and next steps.",
                 temperature=0.1
             )
             
