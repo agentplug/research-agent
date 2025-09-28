@@ -209,15 +209,13 @@ Return JSON: {{"analysis": "analysis of the research results", "goal_reached": T
             first_round = self._first_round_query(query, 'standard')
             results.append(first_round)
             
-            # Round 2
-            follow_up = self._follow_up_round_query(query, results, 'standard')
-            if follow_up:
-                results.append(follow_up)
-                
-                # Round 3
-                follow_up_2 = self._follow_up_round_query(query, results, 'standard')
-                if follow_up_2:
-                    results.append(follow_up_2)
+            # Rounds 2-3: Use for loop
+            for _ in range(2):
+                follow_up = self._follow_up_round_query(query, results, 'standard')
+                if follow_up:
+                    results.append(follow_up)
+                else:
+                    break
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
