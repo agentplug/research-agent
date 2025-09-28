@@ -101,11 +101,15 @@ class ResearchAgent(BaseAgent):
                 if not tools_to_use:
                     break  # No tools selected for this round
                 
-                # Execute tools for this round
+                # Execute tools for this round using follow-up queries
                 round_results = []
-                for tool_name in tools_to_use:
-                    tool_result = self._call_tool(tool_name, {"query": question})
-                    round_results.append(f"{tool_name}: {tool_result}")
+                follow_up_queries = getattr(self, '_current_round_queries', [])
+                
+                for i, tool_name in enumerate(tools_to_use):
+                    # Use specific follow-up query if available, otherwise use original question
+                    query = follow_up_queries[i] if i < len(follow_up_queries) else question
+                    tool_result = self._call_tool(tool_name, {"query": query})
+                    round_results.append(f"{tool_name} (query: {query}): {tool_result}")
                 
                 if round_results:
                     research_data.extend(round_results)
@@ -133,7 +137,7 @@ class ResearchAgent(BaseAgent):
             if research_data:
                 current_context = f"\nResearch progress from previous rounds:\n{chr(10).join(research_data)}"
             
-            # Combined analysis and tool selection in one call
+            # Combined analysis, completion check, tool selection, and follow-up query generation in one call
             combined_prompt = f"""
 Research question: {question}
 Research mode: {mode}
@@ -149,6 +153,7 @@ Analyze the current research progress and provide a JSON response with:
 1. analysis: What information has been gathered so far, what's missing, and what are the next steps
 2. is_complete: Whether the research is complete based on the mode requirements
 3. selected_tools: List of tools to use for this round (empty list if no tools needed)
+4. follow_up_queries: List of specific queries to use with the selected tools (empty list if no tools needed)
 
 For is_complete, consider:
 - For instant research: Is there a quick, direct answer available?
@@ -163,11 +168,19 @@ For selected_tools, consider:
 - You can reuse tools from previous rounds if they would provide additional value
 - You can select different tools if they would provide better coverage
 
+For follow_up_queries, consider:
+- Generate specific, targeted queries for each selected tool
+- Queries should address the identified gaps and missing information
+- Each query should be optimized for the specific tool it will be used with
+- Queries should be more specific than the original research question
+- Generate one query per selected tool
+
 Return only a valid JSON response in this format:
 {{
     "analysis": "detailed analysis of current progress and gaps",
     "is_complete": true/false,
-    "selected_tools": ["tool1", "tool2"] or []
+    "selected_tools": ["tool1", "tool2"] or [],
+    "follow_up_queries": ["query1", "query2"] or []
 }}
 """
             
@@ -184,9 +197,13 @@ Return only a valid JSON response in this format:
                 analysis = response_data.get("analysis", "")
                 is_complete = response_data.get("is_complete", False)
                 selected_tools = response_data.get("selected_tools", [])
+                follow_up_queries = response_data.get("follow_up_queries", [])
                 
                 # Store completion status for later use
                 self._current_round_complete = is_complete
+                
+                # Store follow-up queries for tool execution
+                self._current_round_queries = follow_up_queries
                 
             except json.JSONDecodeError:
                 logger.error(f"Failed to parse JSON response: {combined_response}")
@@ -194,6 +211,7 @@ Return only a valid JSON response in this format:
                 analysis = "Failed to parse analysis response"
                 is_complete = False
                 selected_tools = []
+                follow_up_queries = []
             
             return selected_tools
             
@@ -256,7 +274,7 @@ Return only a valid JSON response in this format:
         except FileNotFoundError:
             # Fallback to default configuration
             return {
-                "ai": {"temperature": 0.1, "max_tokens": None, "timeout": 30},
+                "ai": {"temperature": 0.0, "max_tokens": None, "timeout": 30},
                 "research": {"max_sources_per_round": 10, "max_rounds": 12, "timeout_per_round": 300},
                 "system_prompts": {
                     "instant": "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information.",
@@ -424,7 +442,7 @@ class CoreLLMService:
     def __init__(self, model: Optional[str] = None):
         """Initialize LLM service."""
         self.model = model or self._detect_best_model()
-        self.temperature = 0.1
+        self.temperature = 0.0
         self.max_tokens = None
         self.client = None
         
@@ -600,7 +618,7 @@ def reset_shared_llm_service():
 ```json
 {
   "ai": {
-    "temperature": 0.1,
+    "temperature": 0.0,
     "max_tokens": null,
     "timeout": 30,
     "model": "gpt-4",
