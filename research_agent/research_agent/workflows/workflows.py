@@ -110,50 +110,93 @@ Guidelines:
         self, 
         original_query: str, 
         current_results: List[Dict[str, Any]], 
-        round_number: int
-    ) -> str:
+        round_number: int,
+        max_rounds: int
+    ) -> Dict[str, Any]:
         """
-        Analyze current research results and generate follow-up query.
+        Analyze current research results and determine next action.
         
         Args:
             original_query: Original research query
             current_results: Results from previous rounds
             round_number: Current round number
+            max_rounds: Maximum rounds for this research mode
             
         Returns:
-            Follow-up query for next round
+            Dictionary with analysis results and next action
         """
         if not self.llm_service:
-            return f"Follow-up query for round {round_number + 1}"
+            return {
+                "goal_reached": False,
+                "next_query": f"Follow-up query for round {round_number + 1}",
+                "reasoning": "Mock analysis"
+            }
         
-        # Build summary of current results
-        results_summary = ""
+        # Build comprehensive summary of all research so far
+        research_summary = f"Original Query: {original_query}\n\n"
+        research_summary += f"Research Progress ({round_number}/{max_rounds} rounds completed):\n\n"
+        
         for i, result in enumerate(current_results, 1):
-            results_summary += f"\nRound {i}: {result['content'][:300]}...\n"
+            research_summary += f"Round {i} Query: {result['query']}\n"
+            research_summary += f"Round {i} Answer: {result['content'][:400]}...\n\n"
         
-        gap_analysis_prompt = f"""You are a research analyst. Analyze the current research results and identify gaps or areas that need deeper exploration.
+        gap_analysis_prompt = f"""You are a research analyst. Analyze the current research progress and determine the next action.
 
-Original Query: {original_query}
+{research_summary}
 
-Current Research Results:{results_summary}
+Your task:
+1. Assess if the original query has been comprehensively answered
+2. If not, identify specific gaps that need to be filled
+3. Generate the next focused query to address those gaps
+4. Consider if more rounds are needed or if the goal is reached
 
-Round {round_number + 1} Focus:
-- Identify what information is missing or needs clarification
-- Suggest specific aspects that need deeper analysis
-- Consider different perspectives or angles not yet covered
-- Think about practical applications, case studies, or examples
-- Consider controversies, debates, or differing opinions
-- Think about future implications or trends
+Return your analysis as JSON in this exact format:
+{{
+    "goal_reached": true/false,
+    "reasoning": "Explanation of your assessment",
+    "gaps_identified": ["gap1", "gap2", "gap3"],
+    "next_query": "Specific focused query for next round",
+    "confidence": 0.0-1.0
+}}
 
-Generate a specific, focused follow-up query that will help fill the identified gaps. The query should be actionable and specific, not vague.
+Guidelines:
+- goal_reached: true only if the original query is comprehensively answered
+- reasoning: Explain why the goal is/isn't reached
+- gaps_identified: List specific missing information
+- next_query: Generate a focused, actionable query
+- confidence: Your confidence in the assessment (0.0-1.0)
+- If goal_reached is true, next_query can be empty
+- If round_number >= max_rounds, goal_reached should be true"""
 
-Format: Return only the follow-up query, nothing else."""
-
-        return self.llm_service.generate(
-            input_data=gap_analysis_prompt,
-            system_prompt="You are a research analyst specializing in identifying research gaps and generating focused follow-up queries.",
-            temperature=0.3
-        )
+        try:
+            response = self.llm_service.generate(
+                input_data=gap_analysis_prompt,
+                system_prompt="You are a research analyst specializing in comprehensive research assessment and gap analysis.",
+                temperature=0.3,
+                return_json=True
+            )
+            
+            # Parse JSON response
+            import json
+            analysis = json.loads(response)
+            
+            # Validate required fields
+            required_fields = ["goal_reached", "reasoning", "gaps_identified", "next_query", "confidence"]
+            for field in required_fields:
+                if field not in analysis:
+                    raise ValueError(f"Missing required field: {field}")
+            
+            return analysis
+            
+        except Exception as e:
+            # Fallback if JSON parsing fails
+            return {
+                "goal_reached": round_number >= max_rounds,
+                "reasoning": f"Analysis failed: {str(e)}",
+                "gaps_identified": ["Analysis error occurred"],
+                "next_query": f"Continue research for round {round_number + 1}" if round_number < max_rounds else "",
+                "confidence": 0.5
+            }
 
 
 class InstantWorkflow(BaseWorkflow):
@@ -227,7 +270,7 @@ class QuickWorkflow(BaseWorkflow):
     
     def execute(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Execute quick research workflow (2 rounds).
+        Execute quick research workflow (up to 2 rounds).
         
         Args:
             query: Research query
@@ -239,9 +282,11 @@ class QuickWorkflow(BaseWorkflow):
         try:
             start_time = time.time()
             results = []
+            max_rounds = 2
+            current_round = 1
             
             # Round 1: Initial research
-            research_context = """QUICK RESEARCH MODE (Round 1/2):
+            research_context = f"""QUICK RESEARCH MODE (Round {current_round}/{max_rounds}):
 - Provide enhanced analysis with context
 - Include relevant background information
 - Explain key concepts and relationships
@@ -257,36 +302,55 @@ class QuickWorkflow(BaseWorkflow):
             )
             
             results.append({
-                'round': 1,
+                'round': current_round,
                 'query': query,
                 'content': content,
                 'timestamp': get_current_timestamp()
             })
             
-            # Round 2: Follow-up research
-            followup_query = self._analyze_gaps_and_generate_followup(query, results, 1)
-            
-            research_context = """QUICK RESEARCH MODE (Round 2/2):
-- Build upon the initial research
-- Address specific gaps or clarifications
+            # Multi-round loop: analyze gaps and continue if needed
+            while current_round < max_rounds:
+                # Analyze gaps and determine next action
+                analysis = self._analyze_gaps_and_generate_followup(
+                    original_query=query,
+                    current_results=results,
+                    round_number=current_round,
+                    max_rounds=max_rounds
+                )
+                
+                # Check if goal is reached
+                if analysis.get("goal_reached", False):
+                    break
+                
+                # Generate next query
+                next_query = analysis.get("next_query", "")
+                if not next_query:
+                    break
+                
+                current_round += 1
+                
+                # Generate response for next round
+                research_context = f"""QUICK RESEARCH MODE (Round {current_round}/{max_rounds}):
+- Build upon previous research
+- Address specific gaps: {', '.join(analysis.get('gaps_identified', []))}
+- Focus on: {analysis.get('reasoning', '')}
 - Provide additional context and examples
-- Focus on practical applications
-- Include relevant case studies or scenarios
 - Ensure comprehensive coverage of the topic"""
-            
-            content = self._generate_research_response(
-                query=followup_query,
-                research_context=research_context,
-                temperature=0.2,
-                previous_results=results
-            )
-            
-            results.append({
-                'round': 2,
-                'query': followup_query,
-                'content': content,
-                'timestamp': get_current_timestamp()
-            })
+                
+                content = self._generate_research_response(
+                    query=next_query,
+                    research_context=research_context,
+                    temperature=0.2,
+                    previous_results=results
+                )
+                
+                results.append({
+                    'round': current_round,
+                    'query': next_query,
+                    'content': content,
+                    'analysis': analysis,
+                    'timestamp': get_current_timestamp()
+                })
             
             execution_time = round(time.time() - start_time, 2)
             
@@ -298,13 +362,13 @@ class QuickWorkflow(BaseWorkflow):
                     'content': self._combine_results(results),
                     'rounds': results,
                     'execution_time': execution_time,
-                    'research_rounds': 2,
-                    'total_rounds': 2,
+                    'research_rounds': len(results),
+                    'total_rounds': max_rounds,
                     'sources_used': 0,
                     'context': context or {},
                     'timestamp': get_current_timestamp()
                 },
-                message="Quick research completed (2 rounds)"
+                message=f"Quick research completed ({len(results)} rounds)"
             )
             
         except Exception as e:
@@ -331,7 +395,7 @@ class StandardWorkflow(BaseWorkflow):
     
     def execute(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Execute standard research workflow (3 rounds).
+        Execute standard research workflow (up to 3 rounds).
         
         Args:
             query: Research query
@@ -343,9 +407,11 @@ class StandardWorkflow(BaseWorkflow):
         try:
             start_time = time.time()
             results = []
+            max_rounds = 3
+            current_round = 1
             
             # Round 1: Initial comprehensive research
-            research_context = """STANDARD RESEARCH MODE (Round 1/3):
+            research_context = f"""STANDARD RESEARCH MODE (Round {current_round}/{max_rounds}):
 - Conduct comprehensive analysis from multiple perspectives
 - Examine different viewpoints and approaches
 - Include historical context and evolution
@@ -360,61 +426,58 @@ class StandardWorkflow(BaseWorkflow):
             )
             
             results.append({
-                'round': 1,
+                'round': current_round,
                 'query': query,
                 'content': content,
                 'timestamp': get_current_timestamp()
             })
             
-            # Round 2: Gap analysis and follow-up
-            followup_query = self._analyze_gaps_and_generate_followup(query, results, 1)
-            
-            research_context = """STANDARD RESEARCH MODE (Round 2/3):
-- Address identified gaps from Round 1
+            # Multi-round loop: analyze gaps and continue if needed
+            while current_round < max_rounds:
+                # Analyze gaps and determine next action
+                analysis = self._analyze_gaps_and_generate_followup(
+                    original_query=query,
+                    current_results=results,
+                    round_number=current_round,
+                    max_rounds=max_rounds
+                )
+                
+                # Check if goal is reached
+                if analysis.get("goal_reached", False):
+                    break
+                
+                # Generate next query
+                next_query = analysis.get("next_query", "")
+                if not next_query:
+                    break
+                
+                current_round += 1
+                
+                # Generate response for next round
+                research_context = f"""STANDARD RESEARCH MODE (Round {current_round}/{max_rounds}):
+- Build upon previous research
+- Address specific gaps: {', '.join(analysis.get('gaps_identified', []))}
+- Focus on: {analysis.get('reasoning', '')}
 - Provide deeper analysis of specific aspects
 - Include additional case studies and examples
 - Discuss challenges and limitations
 - Consider different methodologies or approaches
 - Analyze controversies or debates"""
-            
-            content = self._generate_research_response(
-                query=followup_query,
-                research_context=research_context,
-                temperature=0.2,
-                previous_results=results
-            )
-            
-            results.append({
-                'round': 2,
-                'query': followup_query,
-                'content': content,
-                'timestamp': get_current_timestamp()
-            })
-            
-            # Round 3: Final synthesis and implications
-            followup_query = self._analyze_gaps_and_generate_followup(query, results, 2)
-            
-            research_context = """STANDARD RESEARCH MODE (Round 3/3):
-- Synthesize findings from previous rounds
-- Provide balanced, well-rounded coverage
-- Include relevant statistics and data points
-- Address potential implications and future directions
-- Provide comprehensive conclusions
-- Ensure all aspects are thoroughly covered"""
-            
-            content = self._generate_research_response(
-                query=followup_query,
-                research_context=research_context,
-                temperature=0.2,
-                previous_results=results
-            )
-            
-            results.append({
-                'round': 3,
-                'query': followup_query,
-                'content': content,
-                'timestamp': get_current_timestamp()
-            })
+                
+                content = self._generate_research_response(
+                    query=next_query,
+                    research_context=research_context,
+                    temperature=0.2,
+                    previous_results=results
+                )
+                
+                results.append({
+                    'round': current_round,
+                    'query': next_query,
+                    'content': content,
+                    'analysis': analysis,
+                    'timestamp': get_current_timestamp()
+                })
             
             execution_time = round(time.time() - start_time, 2)
             
@@ -426,13 +489,13 @@ class StandardWorkflow(BaseWorkflow):
                     'content': self._combine_results(results),
                     'rounds': results,
                     'execution_time': execution_time,
-                    'research_rounds': 3,
-                    'total_rounds': 3,
+                    'research_rounds': len(results),
+                    'total_rounds': max_rounds,
                     'sources_used': 0,
                     'context': context or {},
                     'timestamp': get_current_timestamp()
                 },
-                message="Standard research completed (3 rounds)"
+                message=f"Standard research completed ({len(results)} rounds)"
             )
             
         except Exception as e:
@@ -459,7 +522,7 @@ class DeepWorkflow(BaseWorkflow):
     
     def execute(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Execute deep research workflow (4 rounds).
+        Execute deep research workflow (up to 4 rounds).
         
         Args:
             query: Research query
@@ -471,9 +534,11 @@ class DeepWorkflow(BaseWorkflow):
         try:
             start_time = time.time()
             results = []
+            max_rounds = 4
+            current_round = 1
             
             # Round 1: Foundation and overview
-            research_context = """DEEP RESEARCH MODE (Round 1/4):
+            research_context = f"""DEEP RESEARCH MODE (Round {current_round}/{max_rounds}):
 - Provide comprehensive overview and foundation
 - Include detailed historical background and evolution
 - Analyze multiple theoretical frameworks and approaches
@@ -488,86 +553,61 @@ class DeepWorkflow(BaseWorkflow):
             )
             
             results.append({
-                'round': 1,
+                'round': current_round,
                 'query': query,
                 'content': content,
                 'timestamp': get_current_timestamp()
             })
             
-            # Round 2: Case studies and applications
-            followup_query = self._analyze_gaps_and_generate_followup(query, results, 1)
-            
-            research_context = """DEEP RESEARCH MODE (Round 2/4):
-- Examine detailed case studies and real-world applications
+            # Multi-round loop: analyze gaps and continue if needed
+            while current_round < max_rounds:
+                # Analyze gaps and determine next action
+                analysis = self._analyze_gaps_and_generate_followup(
+                    original_query=query,
+                    current_results=results,
+                    round_number=current_round,
+                    max_rounds=max_rounds
+                )
+                
+                # Check if goal is reached
+                if analysis.get("goal_reached", False):
+                    break
+                
+                # Generate next query
+                next_query = analysis.get("next_query", "")
+                if not next_query:
+                    break
+                
+                current_round += 1
+                
+                # Generate response for next round
+                research_context = f"""DEEP RESEARCH MODE (Round {current_round}/{max_rounds}):
+- Build upon previous research
+- Address specific gaps: {', '.join(analysis.get('gaps_identified', []))}
+- Focus on: {analysis.get('reasoning', '')}
+- Provide exhaustive, academic-level analysis
+- Include detailed case studies and real-world applications
 - Analyze quantitative data, statistics, and research findings
-- Discuss practical implementations and methodologies
-- Include cross-disciplinary perspectives
-- Provide specific examples and scenarios
-- Analyze trends, patterns, and correlations"""
-            
-            content = self._generate_research_response(
-                query=followup_query,
-                research_context=research_context,
-                temperature=0.3,
-                previous_results=results
-            )
-            
-            results.append({
-                'round': 2,
-                'query': followup_query,
-                'content': content,
-                'timestamp': get_current_timestamp()
-            })
-            
-            # Round 3: Controversies and debates
-            followup_query = self._analyze_gaps_and_generate_followup(query, results, 2)
-            
-            research_context = """DEEP RESEARCH MODE (Round 3/4):
 - Discuss controversies, debates, and differing opinions
-- Analyze ethical implications and societal impact
+- Consider ethical implications and societal impact
 - Examine limitations and challenges
-- Consider alternative approaches and methodologies
-- Analyze conflicting research findings
-- Discuss unresolved questions and areas of uncertainty"""
-            
-            content = self._generate_research_response(
-                query=followup_query,
-                research_context=research_context,
-                temperature=0.3,
-                previous_results=results
-            )
-            
-            results.append({
-                'round': 3,
-                'query': followup_query,
-                'content': content,
-                'timestamp': get_current_timestamp()
-            })
-            
-            # Round 4: Future prospects and synthesis
-            followup_query = self._analyze_gaps_and_generate_followup(query, results, 3)
-            
-            research_context = """DEEP RESEARCH MODE (Round 4/4):
-- Discuss future prospects and emerging developments
 - Provide critical analysis and evaluation
-- Synthesize all findings into comprehensive conclusions
-- Include recommendations and implications
-- Address long-term trends and predictions
-- Provide comprehensive final analysis"""
-            
-            content = self._generate_research_response(
-                query=followup_query,
-                research_context=research_context,
-                temperature=0.3,
-                previous_results=results
-            )
-            
-            results.append({
-                'round': 4,
-                'query': followup_query,
-                'content': content,
-                'timestamp': get_current_timestamp()
-            })
+- Include cross-disciplinary perspectives"""
+                
+                content = self._generate_research_response(
+                    query=next_query,
+                    research_context=research_context,
+                    temperature=0.3,
+                    previous_results=results
+                )
+                
+                results.append({
+                    'round': current_round,
+                    'query': next_query,
+                    'content': content,
+                    'analysis': analysis,
+                    'timestamp': get_current_timestamp()
+                })
             
             execution_time = round(time.time() - start_time, 2)
             
@@ -579,13 +619,13 @@ class DeepWorkflow(BaseWorkflow):
                     'content': self._combine_results(results),
                     'rounds': results,
                     'execution_time': execution_time,
-                    'research_rounds': 4,
-                    'total_rounds': 4,
+                    'research_rounds': len(results),
+                    'total_rounds': max_rounds,
                     'sources_used': 0,
                     'context': context or {},
                     'timestamp': get_current_timestamp()
                 },
-                message="Deep research completed (4 rounds)"
+                message=f"Deep research completed ({len(results)} rounds)"
             )
             
         except Exception as e:
