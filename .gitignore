@@ -164,3 +164,7 @@ test_results/
 # Documentation build
 docs/build/
 docs/_build/
+
+# Development utilities
+create_pr.sh
+.cursor/
