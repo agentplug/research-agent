@@ -229,9 +229,10 @@ Only answer long if needed. If you can confidently answer directly and concisely
                             "clarification_needed": True,
                             "clarification_questions": clarification_questions,
                             "clarification_context": clarification_context,
-                            "message": "Please provide clarification to proceed with deep research",
+                            "timestamp": get_current_timestamp(),
+                            "next_step": "Please provide your clarification and call deep_research again with the same query and your clarification as the second parameter.",
                         },
-                        message="Clarification required for deep research",
+                        message="Clarification required for deep research. Please provide your answers to the questions above.",
                     )
                 else:
                     # Fallback if clarification fails

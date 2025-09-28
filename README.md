@@ -1,51 +1,77 @@
 # Deep Research Agent
 
-An intelligent research orchestrator that conducts comprehensive research using multiple tools, analyzes retrieved data, identifies gaps, and decides next research moves.
+An intelligent research agent that conducts comprehensive research using LLM integration, analyzes retrieved data, identifies gaps, and decides next research moves.
 
 ## Overview
 
-The Deep Research Agent is designed to function both as an independent agent and as a member of multi-agent systems. It provides four research modes with progressive complexity and comprehensive source tracking to prevent duplicate information.
+The Deep Research Agent provides four research modes with progressive complexity and comprehensive clarification system for deep research. Built with KISS & YAGNI principles - direct ResearchAgent interface with no unnecessary wrapper classes.
 
 ## Research Modes
 
-- **Instant Research**: Query → Tools → Data → Answer (1 round, 10 sources, 15-30 sec)
-- **Quick Research**: Query → Tools → Data → Analyze → More Tools → Enhanced Answer (2 rounds, 20 sources, 1-2 min)
-- **Standard Research**: Query → Tools → Data → Analyze → Iterate → Comprehensive Answer (2-5 rounds, 20-50 sources, 8-15 min)
-- **Deep Research**: Query → Clarify → Refine Strategy → Comprehensive Research → Exhaustive Answer (5-12 rounds, 50-120 sources, 20-30 min)
+- **Instant Research**: Quick answers (1 round, ~2 sec)
+- **Quick Research**: Enhanced analysis (2 rounds, ~5 sec)
+- **Standard Research**: Comprehensive research (3 rounds, ~10 sec)
+- **Deep Research**: Exhaustive research with clarification (4 rounds + clarification, ~15 sec)
 
 ## Key Features
 
 - **Progressive Enhancement**: Adapts complexity based on selected mode
-- **Source Tracking**: Prevents duplicate sources across research rounds
-- **Context-Aware Analysis**: Identifies gaps and generates follow-up queries
-- **Clarification System**: Deep mode includes user/agent clarification for refined research
-- **Multi-Agent Support**: Compatible with team workflows and independent usage
-- **Tool Integration**: Seamlessly integrates with external tools
+- **Clarification System**: Deep mode includes user clarification for refined research
+- **Contextual Responses**: LLM-generated natural responses that acknowledge user requirements
+- **Multi-Round Analysis**: Intelligent gap analysis and follow-up queries
+- **Direct Interface**: Simple ResearchAgent class - no wrapper complexity
+- **LLM Integration**: Unified AISuite integration for multiple providers
+- **KISS & YAGNI**: Clean, maintainable code following best practices
 
 ## Architecture
 
-The agent follows an object-oriented design with:
-- **BaseAgent**: Common agent capabilities shared across all agents
-- **ResearchAgent**: Specialized research functionality inheriting from BaseAgent
-- **Research Orchestrator**: Intelligent coordination of tools, analysis, and decision-making
+The agent follows a modular design with:
+- **ResearchAgent**: Main interface with all research capabilities
+- **Analysis Engine**: Mode-specific analysis and gap identification
+- **Research Workflows**: Multi-round research orchestration
+- **Clarification System**: Deep research clarification and intention generation
+- **LLM Service**: Unified AISuite integration
 
 ## Usage
 
-### Via AgentHub
+### Direct Usage
 ```python
-import agenthub as ah
+from research_agent.research_agent.core import ResearchAgent
 
-# Load agent with external tools
-agent = ah.load_agent("agentplug/research-agent", external_tools=["web_search", "document_retrieval"])
+# Initialize agent directly
+agent = ResearchAgent()
 
 # Specific research modes
-result = agent.instant_research("Research question")
-result = agent.quick_research("Research question")
-result = agent.standard_research("Research question")
-result = agent.deep_research("Research question")
+result = agent.instant_research("What is Python?")
+result = agent.quick_research("What is machine learning?")
+result = agent.standard_research("What is artificial intelligence?")
 
-# Auto mode selection
-result = agent.solve("Research question")
+# Deep research with interactive clarification
+result = agent.deep_research("What are AI developments?")
+# This will automatically ask for clarification using input() and then proceed
+# The system will generate a contextual response acknowledging your specific requirements
+
+# Or provide clarification directly
+result = agent.deep_research("What are AI developments?", "Focus on recent ML developments")
+
+# Agent status and testing
+status = agent.get_agent_status()
+test_results = agent.test_agent()
+```
+
+### Command Line Interface
+```bash
+# Status check
+python agent.py --status
+
+# Instant research
+python agent.py --mode instant --query "What is Python?"
+
+# Deep research
+python agent.py --mode deep --query "What are AI developments?"
+
+# With clarification context
+python agent.py --mode deep --query "What are AI developments?" --context '{"user_clarification": "Focus on recent ML developments"}'
 ```
 
 
