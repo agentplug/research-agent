@@ -53,12 +53,12 @@ class ResearchAgent(BaseAgent):
             'deep': "Conduct exhaustive research with academic-level analysis."
         }
         
-        temperatures = {'instant': 0.1, 'quick': 0.2, 'standard': 0.2, 'deep': 0.3}
+        temperatures = {'instant': 0.0, 'quick': 0.0, 'standard': 0.0, 'deep': 0.0}
         
         content = self.llm_service.generate(
             input_data=query,
             system_prompt=system_prompts.get(mode, "You are a helpful research assistant."),
-            temperature=temperatures.get(mode, 0.2)
+            temperature=temperatures.get(mode, 0.0)
         )
         
         return {
@@ -71,7 +71,7 @@ class ResearchAgent(BaseAgent):
     def _follow_up_round_query(self, original_query: str, previous_results: List[Dict[str, Any]], mode: str) -> Optional[Dict[str, Any]]:
         """Execute a follow-up round with gap analysis."""
         research_summary = "\n".join([
-            f"Round {r['round']}: {r['query']}\n{r['content'][:300]}..."
+            f"Round {r['round']}: {r['query']}\n{r['content']}..."
             for r in previous_results
         ])
         
@@ -81,12 +81,12 @@ Original Query: {original_query}
 Previous Research:
 {research_summary}
 
-Return JSON: {{"goal_reached": true/false, "next_query": "specific follow-up query"}}"""
+Return JSON: {{"analysis": "analysis of the research results", "goal_reached": True/False, "next_query": "specific follow-up query"}}"""
 
         analysis_response = self.llm_service.generate(
             input_data=analysis_prompt,
             system_prompt="You are a research analyst specializing in gap analysis.",
-            temperature=0.3,
+            temperature=0.0,
             return_json=True
         )
         
@@ -98,7 +98,7 @@ Return JSON: {{"goal_reached": true/false, "next_query": "specific follow-up que
             followup_content = self.llm_service.generate(
                 input_data=analysis["next_query"],
                 system_prompt="Build upon previous research and address specific gaps.",
-                temperature=0.2
+                temperature=0.0
             )
             
             return {
