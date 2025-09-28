@@ -116,11 +116,24 @@ class InstantWorkflow(BaseWorkflow):
             
             workflow_data = self._simulate_workflow_steps(steps)
             
-            # Generate LLM response
-            llm_response = self.llm_service.generate_response(
-                query=query,
-                mode="instant"
-            ) if self.llm_service else self._mock_llm_response(query, "instant")
+            # Generate LLM response using unified generate() method
+            if self.llm_service:
+                system_prompt = "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information."
+                content = self.llm_service.generate(
+                    input_data=query,
+                    system_prompt=system_prompt,
+                    temperature=0.1
+                )
+                llm_response = {
+                    'success': True,
+                    'data': {
+                        'content': content,
+                        'mode': 'instant',
+                        'query': query
+                    }
+                }
+            else:
+                llm_response = self._mock_llm_response(query, "instant")
             
             return format_response(
                 success=True,
@@ -184,11 +197,24 @@ class QuickWorkflow(BaseWorkflow):
             
             workflow_data = self._simulate_workflow_steps(steps)
             
-            # Generate LLM response
-            llm_response = self.llm_service.generate_response(
-                query=query,
-                mode="quick"
-            ) if self.llm_service else self._mock_llm_response(query, "quick")
+            # Generate LLM response using unified generate() method
+            if self.llm_service:
+                system_prompt = "You are a research assistant for QUICK research mode. Analyze data and provide enhanced answers with context. Include relevant details and insights."
+                content = self.llm_service.generate(
+                    input_data=query,
+                    system_prompt=system_prompt,
+                    temperature=0.2
+                )
+                llm_response = {
+                    'success': True,
+                    'data': {
+                        'content': content,
+                        'mode': 'quick',
+                        'query': query
+                    }
+                }
+            else:
+                llm_response = self._mock_llm_response(query, "quick")
             
             return format_response(
                 success=True,
@@ -253,11 +279,24 @@ class StandardWorkflow(BaseWorkflow):
             
             workflow_data = self._simulate_workflow_steps(steps)
             
-            # Generate LLM response
-            llm_response = self.llm_service.generate_response(
-                query=query,
-                mode="standard"
-            ) if self.llm_service else self._mock_llm_response(query, "standard")
+            # Generate LLM response using unified generate() method
+            if self.llm_service:
+                system_prompt = "You are a research assistant for STANDARD research mode. Conduct comprehensive research with multiple rounds of analysis. Provide thorough, well-structured responses."
+                content = self.llm_service.generate(
+                    input_data=query,
+                    system_prompt=system_prompt,
+                    temperature=0.2
+                )
+                llm_response = {
+                    'success': True,
+                    'data': {
+                        'content': content,
+                        'mode': 'standard',
+                        'query': query
+                    }
+                }
+            else:
+                llm_response = self._mock_llm_response(query, "standard")
             
             return format_response(
                 success=True,
@@ -327,11 +366,24 @@ class DeepWorkflow(BaseWorkflow):
             
             workflow_data = self._simulate_workflow_steps(steps)
             
-            # Generate LLM response
-            llm_response = self.llm_service.generate_response(
-                query=query,
-                mode="deep"
-            ) if self.llm_service else self._mock_llm_response(query, "deep")
+            # Generate LLM response using unified generate() method
+            if self.llm_service:
+                system_prompt = "You are a research assistant for DEEP research mode. Conduct exhaustive research with clarification and comprehensive analysis. Provide detailed, well-researched responses with full context."
+                content = self.llm_service.generate(
+                    input_data=query,
+                    system_prompt=system_prompt,
+                    temperature=0.3
+                )
+                llm_response = {
+                    'success': True,
+                    'data': {
+                        'content': content,
+                        'mode': 'deep',
+                        'query': query
+                    }
+                }
+            else:
+                llm_response = self._mock_llm_response(query, "deep")
             
             return format_response(
                 success=True,
