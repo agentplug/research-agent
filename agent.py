@@ -23,15 +23,17 @@ class ResearchAgentHub:
     Provides the main interface for AgentHub integration and command-line usage.
     """
     
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: Optional[str] = None, model: Optional[str] = None):
         """
-        Initialize Research Agent Hub.
+        Initialize Research Agent Hub with Phase 2 integration.
         
         Args:
             config_path: Path to configuration file
+            model: Specific LLM model to use
         """
         self.config_path = config_path or "config.json"
         self.config = self._load_config()
+        self.model = model
         self.agent = None
         self.error_handler = ErrorHandler("ResearchAgentHub")
     
@@ -67,13 +69,13 @@ class ResearchAgentHub:
     
     def initialize_agent(self) -> bool:
         """
-        Initialize the research agent.
+        Initialize the research agent with Phase 2 integration.
         
         Returns:
             True if successful, False otherwise
         """
         try:
-            self.agent = ResearchAgent(config=self.config)
+            self.agent = ResearchAgent(config=self.config, model=self.model)
             return True
         except Exception as e:
             self.error_handler.log_error(e, {'component': 'agent_initialization'})
@@ -208,10 +210,10 @@ class ResearchAgentHub:
     
     def get_agent_status(self) -> Dict[str, Any]:
         """
-        Get agent status information.
+        Get comprehensive agent status including Phase 2 components.
         
         Returns:
-            Agent status
+            Agent status information
         """
         if not self.agent:
             return format_response(
@@ -219,7 +221,42 @@ class ResearchAgentHub:
                 message="Agent not initialized"
             )
         
-        return self.agent.get_session_info()
+        try:
+            # Get base session info
+            session_info = self.agent.get_session_info()
+            
+            # Get Phase 2 component status
+            llm_status = self.agent.get_llm_service_status()
+            mode_selector_status = self.agent.get_mode_selector_status()
+            source_tracker_status = self.agent.get_source_tracker_status()
+            temp_file_manager_status = self.agent.get_temp_file_manager_status()
+            
+            # Enhance session info with Phase 2 data
+            if session_info.get('success'):
+                session_info['data'].update({
+                    'current_mode': self.agent.get_current_mode(),
+                    'current_round': self.agent.current_round,
+                    'llm_service': llm_status,
+                    'mode_selector': mode_selector_status,
+                    'source_tracker': source_tracker_status,
+                    'temp_file_manager': temp_file_manager_status,
+                    'phase_2_features': {
+                        'real_llm_integration': llm_status.get('type') == 'real',
+                        'intelligent_mode_selection': mode_selector_status.get('enabled', False),
+                        'source_tracking': source_tracker_status.get('data', {}).get('statistics', {}).get('total_sources', 0) >= 0,
+                        'temp_file_management': temp_file_manager_status.get('data', {}).get('enabled', False),
+                        'aisuite_integration': llm_status.get('client_available', False)
+                    }
+                })
+            
+            return session_info
+            
+        except Exception as e:
+            return self.error_handler.handle_error(
+                e,
+                {'component': 'get_status'},
+                "Error getting agent status"
+            )
     
     def test_agent(self) -> Dict[str, Any]:
         """
@@ -238,20 +275,22 @@ class ResearchAgentHub:
 
 
 def main():
-    """Main entry point for command-line usage."""
-    parser = argparse.ArgumentParser(description="Research Agent - Deep research capabilities")
+    """Main entry point for command-line usage with Phase 2 integration."""
+    parser = argparse.ArgumentParser(description="Research Agent - Deep research capabilities with Phase 2 LLM integration")
     parser.add_argument("--config", help="Path to configuration file", default="config.json")
+    parser.add_argument("--model", help="Specific LLM model to use (e.g., 'ollama:llama3.1:8b')")
     parser.add_argument("--mode", choices=["instant", "quick", "standard", "deep"], 
                        help="Research mode", default="standard")
     parser.add_argument("--query", help="Research query")
     parser.add_argument("--context", help="Additional context as JSON string")
     parser.add_argument("--test", action="store_true", help="Test agent capabilities")
     parser.add_argument("--status", action="store_true", help="Show agent status")
+    parser.add_argument("--auto-mode", action="store_true", help="Use intelligent mode selection")
     
     args = parser.parse_args()
     
-    # Initialize agent hub
-    agent_hub = ResearchAgentHub(args.config)
+    # Initialize agent hub with model selection
+    agent_hub = ResearchAgentHub(args.config, args.model)
     
     if not agent_hub.initialize_agent():
         print("Error: Failed to initialize agent")
@@ -273,21 +312,26 @@ def main():
         elif args.status:
             result = agent_hub.get_agent_status()
         else:
-            # Conduct research
+            # Conduct research with intelligent mode selection
             if not args.query:
                 print("Error: --query is required for research operations")
                 sys.exit(1)
             
-            if args.mode == "instant":
-                result = agent_hub.instant_research(args.query, context)
-            elif args.mode == "quick":
-                result = agent_hub.quick_research(args.query, context)
-            elif args.mode == "standard":
-                result = agent_hub.standard_research(args.query, context)
-            elif args.mode == "deep":
-                result = agent_hub.deep_research(args.query, context)
+            # Use intelligent mode selection if requested
+            if args.auto_mode:
+                result = agent_hub.solve(args.query, context={'auto_select_mode': True})
             else:
-                result = agent_hub.solve(args.query, args.mode, context)
+                # Use specified mode
+                if args.mode == "instant":
+                    result = agent_hub.instant_research(args.query, context)
+                elif args.mode == "quick":
+                    result = agent_hub.quick_research(args.query, context)
+                elif args.mode == "standard":
+                    result = agent_hub.standard_research(args.query, context)
+                elif args.mode == "deep":
+                    result = agent_hub.deep_research(args.query, context)
+                else:
+                    result = agent_hub.solve(args.query, args.mode, context)
         
         # Print result
         print(json.dumps(result, indent=2))
