@@ -53,7 +53,6 @@ class ClientManager:
     def _initialize_ollama_client(self, model: str, ai: Any) -> Optional[Any]:
         """Initialize AISuite client for Ollama."""
         try:
-
             # Extract Ollama URL
             ollama_url = os.getenv("OLLAMA_API_URL", "http://localhost:11434")
 
@@ -73,7 +72,6 @@ class ClientManager:
     def _initialize_lmstudio_client(self, model: str, ai: Any) -> Optional[Any]:
         """Initialize AISuite client for LM Studio."""
         try:
-
             # Extract LM Studio URL
             lmstudio_url = os.getenv("LMSTUDIO_API_URL", "http://localhost:1234/v1")
 
@@ -93,7 +91,6 @@ class ClientManager:
     def _initialize_cloud_client(self, model: str, ai: Any) -> Optional[Any]:
         """Initialize AISuite client for cloud providers."""
         try:
-
             # For cloud models, use standard initialization
             return ai.Client()
         except Exception as e:

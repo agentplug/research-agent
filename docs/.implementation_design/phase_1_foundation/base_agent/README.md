@@ -33,15 +33,15 @@ research_agent/base_agent/
 ```python
 class BaseAgent(ABC):
     """Base agent class with common capabilities"""
-    
+
     def __init__(self, llm_service, external_tools=None):
         # Common initialization logic
-    
+
     @abstractmethod
     async def solve(self, question: str) -> Dict[str, Any]:
         """Universal solve method - to be implemented by subclasses"""
         pass
-    
+
     # Common methods for all agents
     async def get_available_tools(self) -> List[str]:
     def validate_input(self, input_data: Dict[str, Any]) -> bool:
@@ -149,11 +149,11 @@ from research_agent.base_agent import BaseAgent
 
 class ResearchAgent(BaseAgent):
     """Research agent inheriting from BaseAgent"""
-    
+
     def __init__(self, llm_service, external_tools=None):
         super().__init__(llm_service, external_tools)
         # Research-specific initialization
-    
+
     async def solve(self, question: str) -> Dict[str, Any]:
         """Implement research-specific solve method"""
         # Research implementation

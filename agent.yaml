@@ -25,7 +25,7 @@ interface:
     returns:
       type: object
       description: Research results with response content and metadata
-  
+
   quick_research:
     description: Conduct quick research with enhanced context
     parameters:
@@ -40,7 +40,7 @@ interface:
     returns:
       type: object
       description: Enhanced research results with insights and analysis
-  
+
   standard_research:
     description: Conduct comprehensive multi-round research
     parameters:
@@ -55,7 +55,7 @@ interface:
     returns:
       type: object
       description: Comprehensive research results with detailed analysis
-  
+
   deep_research:
     description: Conduct exhaustive research with thorough analysis
     parameters:
@@ -70,7 +70,7 @@ interface:
     returns:
       type: object
       description: Exhaustive research results with comprehensive analysis
-  
+
   solve:
     description: Solve a problem using appropriate research mode
     parameters:
@@ -120,19 +120,19 @@ examples:
   instant_research:
     query: "What is artificial intelligence?"
     context: {}
-  
+
   quick_research:
     query: "How does machine learning work?"
     context: {"focus": "algorithms"}
-  
+
   standard_research:
     query: "What are the latest developments in AI research?"
     context: {"year": "2024"}
-  
+
   deep_research:
     query: "Analyze the impact of AI on society and future implications"
     context: {"perspective": "societal"}
-  
+
   solve:
     query: "How can I implement a neural network?"
     mode: "standard"

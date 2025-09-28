@@ -1,15 +1,15 @@
 # Deep Research Agent - Architecture Design (Fixed Diagrams)
 
-**Document Type**: Architecture Design  
-**Author**: William  
-**Date Created**: 2025-09-26  
-**Last Updated**: 2025-09-26  
-**Status**: Draft  
-**Stakeholders**: Research community, Academic institutions, Corporate R&D teams, AgentHub framework users  
-**Architecture Version**: 1.0  
+**Document Type**: Architecture Design
+**Author**: William
+**Date Created**: 2025-09-26
+**Last Updated**: 2025-09-26
+**Status**: Draft
+**Stakeholders**: Research community, Academic institutions, Corporate R&D teams, AgentHub framework users
+**Architecture Version**: 1.0
 
 ## Architecture Reference
-**Requirement Analysis**: [Link to requirement analysis in `.requirement_analysis/` folder]  
+**Requirement Analysis**: [Link to requirement analysis in `.requirement_analysis/` folder]
 **Requirement Version**: 1.0 (2025-09-26)
 
 ## Problem Definition
@@ -48,26 +48,26 @@ graph TB
         SS["Specialized Sources<br/>Industry Reports Patents"]
         NS["News Sources<br/>Reuters AP BBC"]
     end
-    
+
     subgraph "Deep Research Agent System"
         RA["Research Orchestrator<br/>Intelligent Research Coordinator<br/>Uses multiple tools, analyzes data, identifies gaps, decides next moves"]
     end
-    
+
     subgraph "External Framework"
         AH["External Framework Core<br/>Team Orchestration"]
         MA["Multi-Agent Teams<br/>Research, Analysis, Validation"]
     end
-    
+
     subgraph "Usage Modes"
         DU["Independent Usage<br/>Direct Users - Researchers, Analysts"]
         TA["Team Member Usage<br/>As part of multi-agent teams"]
     end
-    
+
     AS --> RA
     WS --> RA
     SS --> RA
     NS --> RA
-    
+
     RA --> AH
     AH --> DU
     AH --> TA
@@ -85,19 +85,19 @@ graph TB
             RE["Research Executor<br/>Tool Coordination and Execution"]
             PS["Tool Orchestrator<br/>Multiple Tool Management"]
         end
-        
+
         subgraph "Intelligence Layer"
             SA["Data Analyzer<br/>Analyze Retrieved Data and Identify Gaps"]
             RS["Research Synthesizer<br/>Integrate Findings and Determine Success Criteria"]
             CI["Decision Engine<br/>Decide Next Research Moves"]
         end
-        
+
         subgraph "Integration Layer"
             AI["Command-line Interface<br/>JSON Input/Output via Command Line"]
             TC["Team Communication<br/>Multi-agent Coordination"]
             CM["Context Manager<br/>Research Context Sharing"]
         end
-        
+
         subgraph "Tool Ecosystem"
             ST["Search Tools<br/>Web Search, Academic Search, News Search"]
             DT["Data Retrieval Tools<br/>File Access, API Integration"]
@@ -105,44 +105,44 @@ graph TB
             LLM["LLM Service<br/>AI Model Integration"]
         end
     end
-    
+
     subgraph "External Systems"
         ADS["Academic Data Sources"]
         WDS["Web Data Sources"]
         NDS["News Data Sources"]
         SDS["Specialized Data Sources"]
     end
-    
+
     subgraph "External Framework"
         AHC["External Framework Core"]
         MAT["Multi-Agent Teams"]
     end
-    
+
     RM --> RE
     RE --> PS
     PS --> SA
     SA --> RS
     RS --> CI
-    
+
     AI --> RM
     TC --> RM
     CM --> RM
-    
+
     ST --> ADS
     ST --> WDS
     ST --> NDS
     ST --> SDS
-    
+
     DT --> ADS
     DT --> WDS
     DT --> NDS
     DT --> SDS
-    
+
     LLM --> RS
     ST --> SA
     DT --> SA
     ET --> SA
-    
+
     AI --> AHC
     TC --> MAT
 ```
@@ -156,13 +156,13 @@ graph TB
         MO["Mode Orchestrator<br/>Mode-specific execution coordination"]
         MT["Mode Timer<br/>Time management per mode"]
     end
-    
+
     subgraph "Research Executor"
         RE["Tool Coordinator<br/>Coordinate multiple tools execution"]
         RP["Gap Analyzer<br/>Analyze retrieved data and identify gaps"]
         RQ["Next Move Decider<br/>Decide what to search next based on gaps"]
     end
-    
+
     subgraph "Tool Management"
         SE["Tool Manager<br/>Manage multiple search and data retrieval tools"]
         AS["Search Tool Interface<br/>Academic search tool integration"]
@@ -170,7 +170,7 @@ graph TB
         NS["News Tool Interface<br/>News search tool integration"]
         SS["Data Tool Interface<br/>Data retrieval tool integration"]
     end
-    
+
     subgraph "Data Intelligence"
         QA["Data Quality Assessor<br/>Evaluate retrieved data quality"]
         VA["Gap Identifier<br/>Identify what information is missing"]
@@ -178,65 +178,65 @@ graph TB
         BA["Success Criteria Evaluator<br/>Determine if research goals are met"]
         ST["Source Tracker<br/>Duplicate Prevention & Source Management"]
     end
-    
+
     subgraph "Research Synthesizer"
         FS["Findings Synthesizer<br/>Integrate findings from multiple tools"]
         IS["Insight Extractor<br/>Extract key insights from analyzed data"]
         RS["Decision Synthesizer<br/>Synthesize decisions for next research moves"]
     end
-    
+
         subgraph "Command-line Interface"
             AR["Command-line Handler<br/>Parse JSON input from command line"]
             JM["JSON Manager<br/>Input/output JSON handling"]
             EM["Error Manager<br/>Error handling and reporting"]
         end
-    
+
     subgraph "Clarification System"
         CG["Clarification Generator<br/>LLM-powered question generation"]
         CH["Clarification Handler<br/>Process clarification responses"]
         SR["Strategy Refiner<br/>Adapt research strategy based on clarifications"]
     end
-    
+
     subgraph "Team Communication"
         PC["Progress Communicator<br/>Real-time progress updates"]
         CS["Context Sharer<br/>Research context sharing"]
         IH["Interruption Handler<br/>Research interruption management"]
     end
-    
+
     MS --> MO
     MO --> MT
     MO --> RE
-    
+
     RE --> RP
     RP --> RQ
     RE --> SE
-    
+
     SE --> AS
     SE --> WS
     SE --> NS
     SE --> SS
-    
+
     AS --> QA
     WS --> QA
     NS --> QA
     SS --> QA
-    
+
     QA --> VA
     VA --> BA
     BA --> FS
-    
+
     FS --> IS
     IS --> RS
-    
+
     AR --> MS
     PC --> MS
     CS --> MS
     IH --> MS
-    
+
     CG --> CH
     CH --> SR
     SR --> MS
-    
+
     ST --> RE
     ST --> QA
     VA --> QG
@@ -252,12 +252,12 @@ graph TB
             IM["Instant Mode<br/>1 Round, 10 Sources, 15-30 sec<br/>Query → Tools → Data → Answer"]
             QM["Quick Mode<br/>2 Rounds, 20 Sources, 1-2 min<br/>Query → Tools → Data → Analyze → More Tools → Enhanced Answer"]
         end
-        
+
         subgraph "Independent Agent Optimized Modes"
             SM["Standard Mode<br/>2-5 Rounds, 20-50 Sources, 8-15 min<br/>Query → Tools → Data → Analyze → Iterate → Comprehensive Answer"]
             DM["Deep Mode<br/>5-12 Rounds, 50-120 Sources, 20-30 min<br/>Query → Clarify → Refine Strategy → Comprehensive Research → Exhaustive Answer"]
         end
-        
+
         subgraph "Mode Selection Logic"
             CS["Context Selector<br/>Independent Agent vs Team Member Detection"]
             MS["Mode Selector<br/>Manual or Auto Mode Selection"]
@@ -265,7 +265,7 @@ graph TB
             US["User Selector<br/>Manual Mode Selection"]
         end
     end
-    
+
     subgraph "Execution Engine"
         RE["Round Executor<br/>Round-based Execution"]
         PS["Parallel Searcher<br/>10 Sources per Round"]
@@ -273,7 +273,7 @@ graph TB
         RS["Research Synthesizer<br/>Findings Integration"]
         ST["Source Tracker<br/>Duplicate Prevention"]
     end
-    
+
     CS --> MS
     MS --> AS
     MS --> US
@@ -285,12 +285,12 @@ graph TB
     US --> QM
     US --> SM
     US --> DM
-    
+
     IM --> RE
     QM --> RE
     SM --> RE
     DM --> RE
-    
+
     RE --> PS
     PS --> SA
     SA --> RS
@@ -401,7 +401,7 @@ graph LR
         M["Mode Input<br/>Instant/Quick/Standard/Deep"]
         C["Context Input<br/>Independent Agent/Team Member Context"]
     end
-    
+
     subgraph "Processing Layer"
         MS["Mode Selection<br/>Context-aware Mode Choice"]
         RE["Round Execution<br/>Iterative Research Rounds"]
@@ -409,7 +409,7 @@ graph LR
         SA["Source Analysis<br/>Quality and Validation"]
         RS["Research Synthesis<br/>Findings Integration"]
     end
-    
+
     subgraph "Output Layer"
         R["Research Results<br/>Structured Findings"]
         S["Sources<br/>Validated References"]
@@ -418,16 +418,16 @@ graph LR
         AD["All Retrieved Data<br/>Complete Research Data"]
         RT["Research Trail<br/>Complete Research History"]
     end
-    
+
     Q --> MS
     M --> MS
     C --> MS
-    
+
     MS --> RE
     RE --> PS
     PS --> SA
     SA --> RS
-    
+
     RS --> R
     RS --> S
     RS --> I
@@ -448,35 +448,35 @@ graph TB
             WP["Worker Pool<br/>Thread Pool Management"]
             QM["Queue Manager<br/>Task Queue Management"]
         end
-        
+
         subgraph "Caching Layer"
             MC["Memory Cache<br/>In-memory Caching"]
             DC["Disk Cache<br/>Persistent Caching"]
             CC["Context Cache<br/>Research Context Caching"]
         end
-        
+
         subgraph "Resource Management"
             RM["Resource Manager<br/>Resource Allocation"]
             LM["Load Manager<br/>Load Balancing"]
             TM["Time Manager<br/>Timeout Management"]
         end
     end
-    
+
     subgraph "External Services"
         API["External APIs<br/>Rate Limited Services"]
         LLM["LLM Services<br/>AI Model Services"]
     end
-    
+
     PP --> WP
     WP --> QM
     QM --> MC
     MC --> DC
     DC --> CC
-    
+
     CC --> RM
     RM --> LM
     LM --> TM
-    
+
     TM --> API
     TM --> LLM
 ```
@@ -491,33 +491,33 @@ graph TB
             AHI["External Interface<br/>Agent Integration"]
             AHD["External Storage<br/>Agent Metadata"]
         end
-        
+
         subgraph "Deep Research Agent"
             DRA["Deep Research Agent<br/>Main Application"]
             RTF["Research Temp Files<br/>Findings Storage"]
             CTF["Cache Temp Files<br/>Performance Cache"]
         end
-        
+
         subgraph "External Services"
             LLM["LLM Services<br/>AI Model APIs"]
             API["Research APIs<br/>Data Source APIs"]
         end
     end
-    
+
     subgraph "Usage Modes"
         DU["Independent Agent Usage<br/>Individual Researchers"]
         MA["Team Member Usage<br/>As part of multi-agent teams"]
     end
-    
+
     AHC --> AHI
     AHI --> DRA
     AHD --> AHC
-    
+
     DRA --> RTF
     DRA --> CTF
     DRA --> LLM
     DRA --> API
-    
+
     DU --> AHC
     MA --> AHC
 ```
@@ -634,25 +634,25 @@ result = agent.solve("Research question")
 ```python
 class BaseAgent:
     """Base agent class with common capabilities shared across all agents"""
-    
+
     def __init__(self, llm_service, external_tools=None):
         self.llm_service = llm_service
         self.external_tools = external_tools or []
         self.context_manager = ContextManager()
         self.error_handler = ErrorHandler()
-    
+
     def solve(self, question):
         """Universal solve method - to be overridden by subclasses"""
         raise NotImplementedError
-    
+
     def get_available_tools(self):
         """Get list of available tools"""
         return self.external_tools
-    
+
     def validate_input(self, input_data):
         """Common input validation"""
         pass
-    
+
     def handle_error(self, error):
         """Common error handling"""
         pass
@@ -662,33 +662,33 @@ class BaseAgent:
 ```python
 class ResearchAgent(BaseAgent):
     """Research agent specialized for research tasks"""
-    
+
     def __init__(self, llm_service, external_tools=None):
         super().__init__(llm_service, external_tools)
         self.research_engine = ResearchEngine()
         self.mode_selector = ModeSelector()
-    
+
     def instant_research(self, question):
         """Instant research mode"""
         return self._execute_research(question, mode="instant")
-    
+
     def quick_research(self, question):
         """Quick research mode"""
         return self._execute_research(question, mode="quick")
-    
+
     def standard_research(self, question):
         """Standard research mode"""
         return self._execute_research(question, mode="standard")
-    
+
     def deep_research(self, question):
         """Deep research mode"""
         return self._execute_research(question, mode="deep")
-    
+
     def solve(self, question):
         """Auto mode selection for research"""
         mode = self.mode_selector.select_mode(question, self.context_manager.get_context())
         return self._execute_research(question, mode=mode)
-    
+
     def _execute_research(self, question, mode):
         """Internal research execution"""
         pass
@@ -752,7 +752,7 @@ class ResearchAgent(BaseAgent):
 **Context**: Need to balance research depth with performance and user experience
 **Decision**: Implement round-based research with fixed sources per round (10)
 **Rationale**: Provides consistent resource usage, predictable performance, and scalable architecture
-**Consequences**: 
+**Consequences**:
 - Pros: Predictable resource usage, easy to optimize, scalable
 - Cons: May not utilize all available sources optimally
 

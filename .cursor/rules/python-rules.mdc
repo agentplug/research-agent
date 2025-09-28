@@ -1,6 +1,6 @@
 ---
 description: Call when do implementation based on implementation design and python language used
-globs: 
+globs:
 alwaysApply: false
 ---
 # Enhanced Python 3.12 Development Rules
@@ -43,9 +43,9 @@ def setup_rag_pipeline(documents: list[Document]) -> VectorStoreIndex:
     """Set up RAG pipeline using llamaindex."""
     embedding_model = OpenAIEmbedding()
     service_context = ServiceContext.from_defaults(embed_model=embedding_model)
-    
+
     index = VectorStoreIndex.from_documents(
-        documents, 
+        documents,
         service_context=service_context
     )
     return index
@@ -92,10 +92,10 @@ async def rag_query(index: VectorStoreIndex, query: str) -> str:
 def process_user(user: User) -> ProcessResult:
     if not user.is_active:
         return ProcessResult(success=False, reason="User inactive")
-    
+
     if not user.has_permissions:
         return ProcessResult(success=False, reason="Insufficient permissions")
-    
+
     # Main logic here
     return ProcessResult(success=True, data=process_data(user))
 ```
@@ -223,7 +223,7 @@ async def fetch_multiple_urls(urls: list[str]) -> list[str]:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 return await response.text()
-    
+
     return await asyncio.gather(*[fetch_url(url) for url in urls])
 
 async def process_stream() -> AsyncIterator[ProcessedItem]:
@@ -280,10 +280,10 @@ def test_process_payment(mock_payment_gateway: Mock):
     # Arrange
     payment = Payment(amount=100, currency="USD")
     mock_payment_gateway.process.return_value = PaymentResult(success=True)
-    
+
     # Act
     result = payment_service.process(payment, mock_payment_gateway)
-    
+
     # Assert
     assert result.success is True
     mock_payment_gateway.process.assert_called_once_with(payment)
@@ -299,32 +299,32 @@ def test_process_payment(mock_payment_gateway: Mock):
 
 ```python
 def calculate_compound_interest(
-    principal: float, 
-    rate: float, 
-    time: float, 
+    principal: float,
+    rate: float,
+    time: float,
     compounds_per_year: int = 1
 ) -> float:
     """Calculate compound interest using the standard formula.
-    
+
     Args:
         principal: Initial investment amount
         rate: Annual interest rate as decimal (e.g., 0.05 for 5%)
         time: Time period in years
         compounds_per_year: Number of times interest is compounded per year
-        
+
     Returns:
         Final amount after compound interest
-        
+
     Raises:
         ValueError: If any input is negative
-        
+
     Example:
         >>> calculate_compound_interest(1000, 0.05, 2)
         1102.5
     """
     if any(x < 0 for x in (principal, rate, time, compounds_per_year)):
         raise ValueError("All inputs must be non-negative")
-    
+
     return principal * (1 + rate / compounds_per_year) ** (compounds_per_year * time)
 ```
 
@@ -380,7 +380,7 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr
     age: int
-    
+
     @validator('name')
     def name_must_be_valid(cls, v: str) -> str:
         if not v.strip():
@@ -539,13 +539,13 @@ repos:
     hooks:
       - id: black
         language_version: python3.12
-  
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.6
     hooks:
       - id: ruff
         args: [--fix]
-  
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
     hooks:
@@ -592,23 +592,23 @@ def run_command(cmd: list[str]) -> None:
 def main():
     """Set up the development environment."""
     print("Setting up development environment...")
-    
+
     # Install uv if not present
     try:
         subprocess.run(["uv", "--version"], check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("Installing uv...")
         subprocess.run([sys.executable, "-m", "pip", "install", "uv"], check=True)
-    
+
     # Install dependencies
     run_command(["uv", "sync"])
-    
+
     # Install pre-commit hooks
     run_command(["pre-commit", "install"])
-    
+
     # Run initial checks
     run_command(["uv", "run", "pre-commit", "run", "--all-files"])
-    
+
     print("✓ Development environment ready!")
 
 if __name__ == "__main__":

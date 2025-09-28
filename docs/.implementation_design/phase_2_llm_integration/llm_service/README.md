@@ -25,30 +25,30 @@ Enhanced LLM service with AISuite integration (AgentHub pattern):
 ```python
 class LLMService:
     """Enhanced LLM service with AgentHub-inspired architecture."""
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None, model: Optional[str] = None):
         self.model_detector = ModelDetector()
         self.client_manager = ClientManager()
-        
+
         # Determine model to use
         if model:
             self.model = model
         else:
             self.model = self.model_detector.detect_best_model()
-        
+
         # Initialize AISuite client
         self.client = self.client_manager.initialize_client(self.model)
-    
+
     def generate_response(self, query: str, mode: str, **kwargs) -> Dict[str, Any]:
         """Generate response using AISuite with research mode optimization."""
         if not self.client:
             return self._fallback_to_mock(query, mode)
-        
+
         try:
             # Build mode-specific prompt
             system_prompt = self._get_system_prompt(mode)
             user_prompt = self._build_user_prompt(query, mode)
-            
+
             # Generate using AISuite
             response = self.client.chat.completions.create(
                 model=self.client_manager.get_actual_model_name(self.model),
@@ -59,9 +59,9 @@ class LLMService:
                 temperature=self._get_mode_temperature(mode),
                 max_tokens=self._get_mode_tokens(mode)
             )
-            
+
             return self._format_response(response, mode, query)
-            
+
         except Exception as e:
             logger.error(f"AISuite generation failed: {e}")
             return self._fallback_to_mock(query, mode)
@@ -74,7 +74,7 @@ Manages AISuite client initialization (AgentHub pattern):
 ```python
 class ClientManager:
     """Manages AISuite client initialization for different providers."""
-    
+
     def initialize_client(self, model: str) -> Optional[Any]:
         """Initialize AISuite client for the given model."""
         try:
@@ -82,14 +82,14 @@ class ClientManager:
         except ImportError:
             logger.warning("AISuite not available, using fallback")
             return None
-        
+
         if self._is_ollama_model(model):
             return self._initialize_ollama_client(model, ai)
         elif self._is_lmstudio_model(model):
             return self._initialize_lmstudio_client(model, ai)
         else:
             return self._initialize_cloud_client(model, ai)
-    
+
     def _initialize_ollama_client(self, model: str, ai: Any) -> Optional[Any]:
         """Initialize AISuite client for Ollama."""
         try:
@@ -104,7 +104,7 @@ class ClientManager:
         except Exception as e:
             logger.error(f"Failed to initialize Ollama client: {e}")
             return None
-    
+
     def get_actual_model_name(self, model: str) -> str:
         """Get the actual model name to use with AISuite."""
         if self._is_ollama_model(model):
@@ -123,20 +123,20 @@ Intelligent model detection and scoring:
 ```python
 class ModelDetector:
     """Handles model detection and scoring for optimal model selection."""
-    
+
     def detect_best_model(self) -> str:
         """Detect the best available model across all providers."""
         # Priority: Local models (Ollama > LM Studio) > Cloud models
         local_model = self._detect_running_local_model()
         if local_model:
             return local_model
-        
+
         cloud_model = self._detect_cloud_model()
         if cloud_model:
             return cloud_model
-        
+
         return "fallback"
-    
+
     def _calculate_model_score(self, model_name: str) -> int:
         """Calculate score based on size, family, and quality indicators."""
 ```
@@ -148,13 +148,13 @@ Configuration constants and data classes:
 ```python
 class ModelConfig:
     """Configuration constants for model selection and scoring."""
-    
+
     SIZE_SCORES = {
         "1b": 10, "2b": 15, "3b": 20, "4b": 35, "7b": 30, "8b": 40,
         "13b": 50, "20b": 60, "32b": 70, "70b": 80, "120b": 90,
         "latest": 40,
     }
-    
+
     FAMILY_SCORES = {
         "gpt-oss": 50, "deepseek": 60, "qwen": 60, "gemma": 45,
         "llama": 40, "mistral": 45, "claude": 55, "gpt": 50,

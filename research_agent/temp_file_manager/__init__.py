@@ -8,7 +8,7 @@ cache management, and automatic cleanup for research sessions.
 from .core import TempFileManager
 
 __all__ = [
-    'TempFileManager',
+    "TempFileManager",
 ]
 
 __version__ = "2.0.0"

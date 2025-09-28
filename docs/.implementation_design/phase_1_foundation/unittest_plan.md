@@ -37,19 +37,19 @@ tests/
 ```python
 def test_base_agent_initialization():
     """Test BaseAgent initialization with various parameters"""
-    
+
     # Test with minimal parameters
     agent = BaseAgent(mock_llm_service)
     assert agent.llm_service == mock_llm_service
     assert agent.external_tools == []
     assert agent.agent_id is not None
     assert agent.created_at is not None
-    
+
     # Test with external tools
     tools = ["web_search", "academic_search"]
     agent = BaseAgent(mock_llm_service, external_tools=tools)
     assert agent.external_tools == tools
-    
+
     # Test with configuration
     config = {"timeout": 60}
     agent = BaseAgent(mock_llm_service, config=config)
@@ -57,19 +57,19 @@ def test_base_agent_initialization():
 
 def test_base_agent_abstract_methods():
     """Test that BaseAgent abstract methods raise NotImplementedError"""
-    
+
     agent = BaseAgent(mock_llm_service)
-    
+
     # Test abstract solve method
     with pytest.raises(NotImplementedError):
         agent.solve("test question")
 
 def test_get_available_tools():
     """Test get_available_tools method"""
-    
+
     tools = ["web_search", "academic_search"]
     agent = BaseAgent(mock_llm_service, external_tools=tools)
-    
+
     available_tools = agent.get_available_tools()
     assert len(available_tools) == 2
     assert "web_search" in available_tools
@@ -77,30 +77,30 @@ def test_get_available_tools():
 
 def test_validate_input():
     """Test input validation"""
-    
+
     agent = BaseAgent(mock_llm_service)
-    
+
     # Valid input
     valid_input = {"question": "What is AI?"}
     assert agent.validate_input(valid_input) == True
-    
+
     # Invalid input - missing question
     invalid_input = {"topic": "AI"}
     assert agent.validate_input(invalid_input) == False
-    
+
     # Invalid input - empty question
     empty_input = {"question": ""}
     assert agent.validate_input(empty_input) == False
 
 def test_handle_error():
     """Test error handling"""
-    
+
     agent = BaseAgent(mock_llm_service)
-    
+
     # Test with different error types
     test_error = ValueError("Test error")
     error_response = agent.handle_error(test_error)
-    
+
     assert error_response["error"] == True
     assert "error_id" in error_response
     assert "message" in error_response
@@ -112,17 +112,17 @@ def test_handle_error():
 ```python
 def test_context_management():
     """Test context management functionality"""
-    
+
     agent = BaseAgent(mock_llm_service)
-    
+
     # Test setting context
     agent.context_manager.set_context("session_id", "test_session")
     assert agent.context_manager.get_context("session_id") == "test_session"
-    
+
     # Test conversation history
     agent.context_manager.add_to_conversation("user", "What is AI?")
     agent.context_manager.add_to_conversation("agent", "AI is...")
-    
+
     history = agent.context_manager.get_conversation_history()
     assert len(history) == 2
     assert history[0]["role"] == "user"
@@ -135,7 +135,7 @@ def test_context_management():
 ```python
 def test_research_agent_initialization():
     """Test ResearchAgent initialization"""
-    
+
     agent = ResearchAgent(mock_llm_service)
     assert isinstance(agent, BaseAgent)
     assert agent.llm_service == mock_llm_service
@@ -145,9 +145,9 @@ def test_research_agent_initialization():
 
 def test_research_methods_exist():
     """Test that all research methods exist"""
-    
+
     agent = ResearchAgent(mock_llm_service)
-    
+
     assert hasattr(agent, 'instant_research')
     assert hasattr(agent, 'quick_research')
     assert hasattr(agent, 'standard_research')
@@ -159,10 +159,10 @@ def test_research_methods_exist():
 ```python
 def test_instant_research():
     """Test instant research method"""
-    
+
     agent = ResearchAgent(mock_llm_service)
     result = agent.instant_research("What is AI?")
-    
+
     # Validate response format
     assert "result" in result
     assert "mode" in result
@@ -170,7 +170,7 @@ def test_instant_research():
     assert "status" in result
     assert "timestamp" in result
     assert "metadata" in result
-    
+
     # Validate content
     assert result["mode"] == "instant"
     assert result["status"] == "success"
@@ -179,44 +179,44 @@ def test_instant_research():
 
 def test_quick_research():
     """Test quick research method"""
-    
+
     agent = ResearchAgent(mock_llm_service)
     result = agent.quick_research("How does ML work?")
-    
+
     assert result["mode"] == "quick"
     assert result["status"] == "success"
     assert len(result["result"]) > 0
 
 def test_standard_research():
     """Test standard research method"""
-    
+
     agent = ResearchAgent(mock_llm_service)
     result = agent.standard_research("Latest AI developments")
-    
+
     assert result["mode"] == "standard"
     assert result["status"] == "success"
     assert len(result["result"]) > 0
 
 def test_deep_research():
     """Test deep research method"""
-    
+
     agent = ResearchAgent(mock_llm_service)
     result = agent.deep_research("AI ethics analysis")
-    
+
     assert result["mode"] == "deep"
     assert result["status"] == "success"
     assert len(result["result"]) > 0
 
 def test_solve_method():
     """Test solve method with auto mode selection"""
-    
+
     agent = ResearchAgent(mock_llm_service)
-    
+
     # Test simple question
     result = agent.solve("What is AI?")
     assert result["status"] == "success"
     assert result["mode"] in ["instant", "quick", "standard", "deep"]
-    
+
     # Test complex question
     result = agent.solve("Comprehensive analysis of AI ethics")
     assert result["status"] == "success"
@@ -227,21 +227,21 @@ def test_solve_method():
 ```python
 def test_mode_selection():
     """Test mode selection logic"""
-    
+
     agent = ResearchAgent(mock_llm_service)
-    
+
     # Test instant mode selection
     mode = agent._select_mode("What is AI?")
     assert mode == "instant"
-    
+
     # Test quick mode selection
     mode = agent._select_mode("How does machine learning work?")
     assert mode == "quick"
-    
+
     # Test standard mode selection
     mode = agent._select_mode("Latest developments in AI research")
     assert mode == "standard"
-    
+
     # Test deep mode selection
     mode = agent._select_mode("Comprehensive analysis of AI ethics")
     assert mode == "deep"
@@ -251,14 +251,14 @@ def test_mode_selection():
 ```python
 def test_research_error_handling():
     """Test error handling in research methods"""
-    
+
     agent = ResearchAgent(mock_llm_service)
-    
+
     # Test empty question
     result = agent.instant_research("")
     assert result["status"] == "error"
     assert "error" in result["result"].lower()
-    
+
     # Test invalid input
     result = agent.quick_research(None)
     assert result["status"] == "error"
@@ -270,7 +270,7 @@ def test_research_error_handling():
 ```python
 def test_llm_service_initialization():
     """Test LLM service initialization"""
-    
+
     service = CoreLLMService()
     assert service.mock_responses is not None
     assert hasattr(service, 'generate')
@@ -278,10 +278,10 @@ def test_llm_service_initialization():
 
 def test_shared_instance():
     """Test shared instance management"""
-    
+
     service1 = get_shared_llm_service()
     service2 = get_shared_llm_service()
-    
+
     assert service1 is service2  # Should be the same instance
 ```
 
@@ -289,14 +289,14 @@ def test_shared_instance():
 ```python
 def test_generate_response():
     """Test response generation"""
-    
+
     service = CoreLLMService()
-    
+
     # Test basic generation
     response = service.generate("What is AI?")
     assert isinstance(response, str)
     assert len(response) > 0
-    
+
     # Test with system prompt
     response = service.generate("What is AI?", system_prompt="You are a helpful assistant")
     assert isinstance(response, str)
@@ -304,25 +304,25 @@ def test_generate_response():
 
 def test_mode_specific_responses():
     """Test mode-specific response generation"""
-    
+
     service = CoreLLMService()
-    
+
     # Test instant response
     instant_response = service.generate("What is AI?", mode="instant")
     assert len(instant_response) < 200  # Should be short
-    
+
     # Test deep response
     deep_response = service.generate("What is AI?", mode="deep")
     assert len(deep_response) > 1000  # Should be long
 
 def test_research_analysis():
     """Test research analysis generation"""
-    
+
     service = CoreLLMService()
-    
+
     data = [{"title": "Test source", "content": "Test content"}]
     analysis = service.generate_research_analysis("AI ethics", data, "comprehensive")
-    
+
     assert isinstance(analysis, str)
     assert len(analysis) > 0
 ```
@@ -333,36 +333,36 @@ def test_research_analysis():
 ```python
 def test_context_operations():
     """Test context management operations"""
-    
+
     manager = ContextManager()
-    
+
     # Test setting and getting context
     manager.set_context("test_key", "test_value")
     assert manager.get_context("test_key") == "test_value"
-    
+
     # Test context with persistence
     manager.set_context("persistent_key", "persistent_value", persistent=True)
     assert manager.get_context("persistent_key") == "persistent_value"
-    
+
     # Test context removal
     manager.remove_context("test_key")
     assert manager.get_context("test_key") is None
 
 def test_conversation_history():
     """Test conversation history management"""
-    
+
     manager = ContextManager()
-    
+
     # Add conversation entries
     manager.add_to_conversation("user", "What is AI?")
     manager.add_to_conversation("agent", "AI is artificial intelligence")
-    
+
     # Test history retrieval
     history = manager.get_conversation_history()
     assert len(history) == 2
     assert history[0]["role"] == "user"
     assert history[1]["role"] == "agent"
-    
+
     # Test history with limit
     recent_history = manager.get_conversation_history(limit=1)
     assert len(recent_history) == 1
@@ -370,17 +370,17 @@ def test_conversation_history():
 
 def test_metadata_management():
     """Test metadata management"""
-    
+
     manager = ContextManager()
-    
+
     # Set metadata
     manager.set_metadata("research", "sources_used", 10)
     manager.set_metadata("research", "rounds_completed", 3)
-    
+
     # Get metadata
     sources = manager.get_metadata("research", "sources_used")
     assert sources == 10
-    
+
     # Get all metadata for category
     research_metadata = manager.get_metadata("research")
     assert research_metadata["sources_used"] == 10
@@ -393,19 +393,19 @@ def test_metadata_management():
 ```python
 def test_error_categorization():
     """Test error categorization"""
-    
+
     handler = ErrorHandler()
-    
+
     # Test network error
     network_error = ConnectionError("Connection failed")
     category = handler._categorize_error(network_error)
     assert category == ErrorCategory.NETWORK
-    
+
     # Test validation error
     validation_error = ValueError("Invalid input")
     category = handler._categorize_error(validation_error)
     assert category == ErrorCategory.VALIDATION
-    
+
     # Test timeout error
     timeout_error = TimeoutError("Request timed out")
     category = handler._categorize_error(timeout_error)
@@ -413,14 +413,14 @@ def test_error_categorization():
 
 def test_error_severity():
     """Test error severity assessment"""
-    
+
     handler = ErrorHandler()
-    
+
     # Test critical error
     critical_error = Exception("Critical system failure")
     severity = handler._assess_severity(critical_error, ErrorCategory.INTERNAL)
     assert severity == ErrorSeverity.CRITICAL
-    
+
     # Test low severity error
     low_error = ValueError("Invalid input")
     severity = handler._assess_severity(low_error, ErrorCategory.VALIDATION)
@@ -428,15 +428,15 @@ def test_error_severity():
 
 def test_user_friendly_messages():
     """Test user-friendly error message generation"""
-    
+
     handler = ErrorHandler()
-    
+
     # Test network error message
     network_error = ConnectionError("Connection failed")
     message = handler._generate_user_message(network_error, ErrorCategory.NETWORK, ErrorSeverity.MEDIUM)
     assert "connect" in message.lower()
     assert "try again" in message.lower()
-    
+
     # Test validation error message
     validation_error = ValueError("Invalid input")
     message = handler._generate_user_message(validation_error, ErrorCategory.VALIDATION, ErrorSeverity.LOW)
@@ -450,7 +450,7 @@ def test_user_friendly_messages():
 ```python
 def test_validate_input_data():
     """Test input data validation"""
-    
+
     schema = {
         "type": "object",
         "properties": {
@@ -462,22 +462,22 @@ def test_validate_input_data():
         },
         "required": ["question"]
     }
-    
+
     # Valid data
     valid_data = {"question": "What is AI?"}
     assert validate_input_data(valid_data, schema) == True
-    
+
     # Invalid data - missing required field
     invalid_data = {"topic": "AI"}
     assert validate_input_data(invalid_data, schema) == False
-    
+
     # Invalid data - empty string
     empty_data = {"question": ""}
     assert validate_input_data(empty_data, schema) == False
 
 def test_response_formatting():
     """Test response formatting"""
-    
+
     # Test successful response
     response = format_response(True, {"result": "test"}, "Success")
     assert response["success"] == True
@@ -485,7 +485,7 @@ def test_response_formatting():
     assert response["message"] == "Success"
     assert "timestamp" in response
     assert "response_id" in response
-    
+
     # Test error response
     response = format_response(False, None, "Error occurred")
     assert response["success"] == False
@@ -494,19 +494,19 @@ def test_response_formatting():
 
 def test_string_utilities():
     """Test string utility functions"""
-    
+
     # Test string sanitization
     dirty_string = "Test\x00string\x1fwith\x7fcontrol\x9fchars"
     clean_string = sanitize_string(dirty_string)
     assert "\x00" not in clean_string
     assert "\x1f" not in clean_string
-    
+
     # Test string truncation
     long_string = "A" * 200
     truncated = truncate_text(long_string, max_length=100)
     assert len(truncated) == 100
     assert truncated.endswith("...")
-    
+
     # Test URL validation
     assert is_valid_url("https://example.com") == True
     assert is_valid_url("http://localhost:8080") == True
@@ -521,11 +521,11 @@ def test_string_utilities():
 ```python
 def test_agent_integration():
     """Test complete agent integration"""
-    
+
     # Test agent initialization
     agent = ResearchAgent(mock_llm_service)
     assert agent is not None
-    
+
     # Test all methods work together
     methods = ['instant_research', 'quick_research', 'standard_research', 'deep_research', 'solve']
     for method in methods:
@@ -535,14 +535,14 @@ def test_agent_integration():
 
 def test_workflow_integration():
     """Test workflow integration"""
-    
+
     agent = ResearchAgent(mock_llm_service)
-    
+
     # Test that workflows use correct components
     result = agent.instant_research("What is AI?")
     assert result["mode"] == "instant"
     assert result["status"] == "success"
-    
+
     # Test mode selection integration
     result = agent.solve("What is AI?")
     assert result["status"] == "success"

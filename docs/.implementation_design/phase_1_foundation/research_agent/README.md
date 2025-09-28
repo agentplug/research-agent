@@ -34,19 +34,19 @@ research_agent/research_agent/
 ```python
 class ResearchAgent(BaseAgent):
     """Research agent specialized for research tasks"""
-    
+
     async def instant_research(self, question: str) -> Dict[str, Any]:
         """Instant research: 1 round, 10 sources, 15-30 sec"""
-    
+
     async def quick_research(self, question: str) -> Dict[str, Any:
         """Quick research: 2 rounds, 20 sources, 1-2 min"""
-    
+
     async def standard_research(self, question: str) -> Dict[str, Any]:
         """Standard research: 5 rounds, 50 sources, 8-15 min"""
-    
+
     async def deep_research(self, question: str) -> Dict[str, Any]:
         """Deep research: 12 rounds, 120 sources, 20-30 min"""
-    
+
     async def solve(self, question: str) -> Dict[str, Any]:
         """Auto mode selection for research"""
 ```

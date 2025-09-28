@@ -77,7 +77,7 @@ research_agent/
 ```python
 # Tools are provided by users through AgentHub
 agent = ah.load_agent(
-    "agentplug/research-agent", 
+    "agentplug/research-agent",
     external_tools=["web_search", "academic_search", "news_search"]
 )
 
@@ -125,7 +125,7 @@ import agenthub as ah
 
 # Load agent with external tools
 agent = ah.load_agent(
-    "agentplug/research-agent", 
+    "agentplug/research-agent",
     external_tools=["web_search", "academic_search", "news_search"]
 )
 

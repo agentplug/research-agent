@@ -144,17 +144,17 @@ This document outlines the implementation order for Phase 2: LLM Integration, fo
 ### High-Risk Items
 1. **AISuite Integration**: New dependency, potential compatibility issues
    - **Mitigation**: Test with multiple providers, maintain mock fallback
-   
+
 2. **Model Detection**: Complex logic, potential edge cases
    - **Mitigation**: Comprehensive testing, graceful fallbacks
-   
+
 3. **Source Tracking**: URL normalization complexity
    - **Mitigation**: Extensive testing with various URL formats
 
 ### Medium-Risk Items
 1. **Mode Selection**: Query analysis accuracy
    - **Mitigation**: Validation mechanisms, user override options
-   
+
 2. **File Management**: Cross-platform compatibility
    - **Mitigation**: Use pathlib, test on multiple platforms
 

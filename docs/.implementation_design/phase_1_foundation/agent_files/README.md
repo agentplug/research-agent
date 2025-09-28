@@ -50,33 +50,33 @@ logger = logging.getLogger(__name__)
 
 class ResearchAgent:
     """Deep research agent for comprehensive research tasks."""
-    
+
     def __init__(self, tool_context: Optional[Dict[str, Any]] = None):
         """Initialize the research agent."""
         self.config = self._load_config()
         self.llm_service = get_shared_llm_service()
-        
+
         # Parse tool context from AgentHub
         self.tool_context = tool_context or {}
         self.available_tools = self.tool_context.get("available_tools", [])
         self.tool_descriptions = self.tool_context.get("tool_descriptions", {})
-    
+
     def instant_research(self, question: str) -> str:
         """Conduct instant research (1 round, 10 sources, 15-30 sec)."""
         # Implementation details
-    
+
     def quick_research(self, question: str) -> str:
         """Conduct quick research (2 rounds, 20 sources, 1-2 min)."""
         # Implementation details
-    
+
     def standard_research(self, question: str) -> str:
         """Conduct standard research (2-5 rounds, 20-50 sources, 8-15 min)."""
         # Implementation details
-    
+
     def deep_research(self, question: str) -> str:
         """Conduct deep research (5-12 rounds, 50-120 sources, 20-30 min)."""
         # Implementation details
-    
+
     def solve(self, question: str) -> str:
         """Universal solve method with auto mode selection."""
         # Implementation details
@@ -87,17 +87,17 @@ def main():
     if len(sys.argv) != 2:
         print(json.dumps({"error": "Invalid arguments"}))
         sys.exit(1)
-    
+
     try:
         # Parse input from command line
         input_data = json.loads(sys.argv[1])
         method = input_data.get("method")
         parameters = input_data.get("parameters", {})
         tool_context = input_data.get("tool_context", {})
-        
+
         # Create agent instance with tool context
         agent = ResearchAgent(tool_context=tool_context)
-        
+
         # Execute requested method
         if method == "instant_research":
             result = agent.instant_research(parameters.get("question", ""))
@@ -117,7 +117,7 @@ def main():
         else:
             print(json.dumps({"error": f"Unknown method: {method}"}))
             sys.exit(1)
-            
+
     except Exception as e:
         print(json.dumps({"error": str(e)}))
         sys.exit(1)
@@ -168,7 +168,7 @@ interface:
       returns:
         type: "string"
         description: "Direct research results with key facts and essential information"
-    
+
     quick_research:
       description: "Perform enhanced research with context-aware analysis across multiple rounds. Executes in 1-2 minutes with 2 research rounds and 20 sources. Analyzes initial results to improve follow-up queries and provides comprehensive answers with additional context. Ideal for moderate complexity questions requiring some depth."
       parameters:
@@ -179,7 +179,7 @@ interface:
       returns:
         type: "string"
         description: "Enhanced research results with context and detailed insights"
-    
+
     standard_research:
       description: "Conduct comprehensive research with systematic gap analysis and iterative refinement. Executes in 8-15 minutes with 5 research rounds and 50 sources. Identifies information gaps, generates targeted follow-up queries, and synthesizes results from multiple research rounds for thorough coverage. Best for complex topics requiring detailed analysis."
       parameters:
@@ -190,7 +190,7 @@ interface:
       returns:
         type: "string"
         description: "Comprehensive research results with thorough analysis and synthesis"
-    
+
     deep_research:
       description: "Execute exhaustive research with clarification questions and maximum depth analysis. Executes in 20-30 minutes with 12 research rounds and 120 sources. Generates clarification questions to better understand requirements, conducts extensive gap analysis, and provides academic-level comprehensive research with full context and detailed findings. Perfect for research projects requiring exhaustive analysis."
       parameters:
@@ -201,7 +201,7 @@ interface:
       returns:
         type: "string"
         description: "Exhaustive research results with comprehensive analysis and detailed findings"
-    
+
     solve:
       description: "Automatically select the most appropriate research mode based on question complexity, context, and available time. Uses intelligent analysis to determine whether instant (15-30s), quick (1-2min), standard (8-15min), or deep (20-30min) research is needed for optimal results. Considers both research depth requirements and time constraints."
       parameters:

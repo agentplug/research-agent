@@ -65,25 +65,25 @@ research_agent/
 ```python
 class BaseProvider(ABC):
     """Base class for LLM providers."""
-    
+
     @abstractmethod
     def generate_response(self, query: str, **kwargs) -> Dict[str, Any]:
         pass
-    
+
     @abstractmethod
     def get_available_models(self) -> List[Dict[str, Any]]:
         pass
-    
+
     @abstractmethod
     def test_connection(self) -> bool:
         pass
 
 class OllamaProvider(BaseProvider):
     """Ollama provider implementation."""
-    
+
 class OpenAIProvider(BaseProvider):
     """OpenAI provider implementation."""
-    
+
 class AnthropicProvider(BaseProvider):
     """Anthropic provider implementation."""
 ```
@@ -92,10 +92,10 @@ class AnthropicProvider(BaseProvider):
 ```python
 class ModelDetector:
     """Intelligent model detection and selection."""
-    
+
     def select_model(self, mode: str, query: str, available_models: List[str]) -> str:
         """Select optimal model based on mode and query complexity."""
-        
+
         # Mode-specific model preferences
         mode_preferences = {
             'instant': ['gpt-3.5-turbo', 'claude-3-haiku', 'llama3.1:8b'],
@@ -103,10 +103,10 @@ class ModelDetector:
             'standard': ['gpt-4', 'claude-3-opus', 'llama3.1:70b'],
             'deep': ['gpt-4', 'claude-3-opus', 'llama3.1:70b']
         }
-        
+
         # Query complexity analysis
         complexity = self._analyze_query_complexity(query)
-        
+
         # Select best available model
         return self._select_best_model(mode_preferences[mode], available_models, complexity)
 ```
@@ -117,27 +117,27 @@ class ModelDetector:
 ```python
 class ModeSelector:
     """Intelligent mode selection based on question analysis."""
-    
+
     def select_mode(self, query: str, context: Optional[Dict[str, Any]] = None) -> str:
         """Select optimal research mode based on query characteristics."""
-        
+
         # Analyze query complexity
         complexity_score = self._analyze_complexity(query)
-        
+
         # Check for explicit mode indicators
         explicit_mode = self._detect_explicit_mode(query)
         if explicit_mode:
             return explicit_mode
-        
+
         # Analyze query length and structure
         length_score = self._analyze_length(query)
-        
+
         # Check for research-specific keywords
         keyword_score = self._analyze_keywords(query)
-        
+
         # Combine scores to determine mode
         total_score = complexity_score + length_score + keyword_score
-        
+
         if total_score >= 8:
             return 'deep'
         elif total_score >= 5:
@@ -146,7 +146,7 @@ class ModeSelector:
             return 'quick'
         else:
             return 'instant'
-    
+
     def _analyze_complexity(self, query: str) -> int:
         """Analyze query complexity indicators."""
         complexity_indicators = {
@@ -163,14 +163,14 @@ class ModeSelector:
             'what is': 0,
             'how': 1
         }
-        
+
         query_lower = query.lower()
         score = 0
-        
+
         for indicator, weight in complexity_indicators.items():
             if indicator in query_lower:
                 score += weight
-        
+
         return min(score, 5)  # Cap at 5
 ```
 
@@ -180,17 +180,17 @@ class ModeSelector:
 ```python
 class SourceTracker:
     """Track and deduplicate sources across research rounds."""
-    
+
     def __init__(self):
         self.used_sources = set()
         self.source_metadata = {}
         self.session_sources = []
-    
+
     def add_source(self, url: str, metadata: Dict[str, Any]) -> bool:
         """Add source if not already used."""
         if url in self.used_sources:
             return False
-        
+
         self.used_sources.add(url)
         self.source_metadata[url] = {
             'url': url,
@@ -199,11 +199,11 @@ class SourceTracker:
         }
         self.session_sources.append(url)
         return True
-    
+
     def get_unused_sources(self, candidate_sources: List[str]) -> List[str]:
         """Filter out already used sources."""
         return [url for url in candidate_sources if url not in self.used_sources]
-    
+
     def get_session_summary(self) -> Dict[str, Any]:
         """Get summary of sources used in current session."""
         return {
@@ -221,10 +221,10 @@ Each research mode gets its own dedicated workflow class:
 ```python
 class InstantWorkflow(BaseWorkflow):
     """Instant research workflow - single LLM call."""
-    
+
     def execute(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute instant research with single LLM call."""
-        
+
         # Single LLM call with instant-optimized prompt
         response = self.llm_service.generate_response(
             query=query,
@@ -232,15 +232,15 @@ class InstantWorkflow(BaseWorkflow):
             temperature=0.1,  # Low temperature for factual responses
             max_tokens=500    # Limited tokens for quick responses
         )
-        
+
         return self._format_response(response, rounds=1, sources=0)
 
 class DeepWorkflow(BaseWorkflow):
     """Deep research workflow - multiple rounds with clarification."""
-    
+
     def execute(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute deep research with multiple rounds and clarification."""
-        
+
         # Round 1: Generate clarification questions
         clarification_response = self.llm_service.generate_response(
             query=f"Generate clarification questions for: {query}",
@@ -248,7 +248,7 @@ class DeepWorkflow(BaseWorkflow):
             temperature=0.3,
             max_tokens=1000
         )
-        
+
         # Round 2-4: Research with clarifications
         research_responses = []
         for round_num in range(2, 5):
@@ -259,7 +259,7 @@ class DeepWorkflow(BaseWorkflow):
                 max_tokens=1500
             )
             research_responses.append(response)
-        
+
         # Final synthesis
         synthesis_response = self.llm_service.generate_response(
             query=f"Synthesize comprehensive analysis for: {query}",
@@ -267,7 +267,7 @@ class DeepWorkflow(BaseWorkflow):
             temperature=0.1,
             max_tokens=2000
         )
-        
+
         return self._format_deep_response(
             clarification_response, research_responses, synthesis_response
         )
@@ -279,29 +279,29 @@ class DeepWorkflow(BaseWorkflow):
 ```python
 class TempFileManager:
     """Manage temporary files for research data."""
-    
+
     def __init__(self, base_dir: str = "/tmp/research_agent"):
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(exist_ok=True)
         self.session_dir = None
-    
+
     def create_session(self, session_id: str) -> Path:
         """Create session-specific directory."""
         self.session_dir = self.base_dir / session_id
         self.session_dir.mkdir(exist_ok=True)
         return self.session_dir
-    
+
     def save_research_data(self, data: Dict[str, Any], filename: str) -> Path:
         """Save research data to temporary file."""
         if not self.session_dir:
             raise ValueError("No active session")
-        
+
         file_path = self.session_dir / filename
         with open(file_path, 'w') as f:
             json.dump(data, f, indent=2)
-        
+
         return file_path
-    
+
     def cleanup_session(self, session_id: str):
         """Clean up session files."""
         session_path = self.base_dir / session_id
@@ -384,13 +384,13 @@ class TempFileManager:
 ```python
 class LLMService(LLMService):
     """Enhanced LLM service with real providers."""
-    
+
     def generate_response(self, query: str, mode: str, **kwargs) -> Dict[str, Any]:
         """Generate response with retry logic and fallback."""
-        
+
         providers = self.config.get('llm', {}).get('fallback_order', ['ollama'])
         last_error = None
-        
+
         for provider_name in providers:
             try:
                 provider = self._get_provider(provider_name)
@@ -404,7 +404,7 @@ class LLMService(LLMService):
                     'mode': mode
                 })
                 continue
-        
+
         # All providers failed, return error
         return self.error_handler.handle_error(
             last_error,
@@ -419,30 +419,30 @@ class LLMService(LLMService):
 ```python
 class ResearchAgent(BaseAgent):
     """Enhanced ResearchAgent with real LLM integration."""
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None, **kwargs):
         super().__init__(config, **kwargs)
-        
+
         # Initialize Phase 2 components
         self.mode_selector = ModeSelector()
         self.source_tracker = SourceTracker()
         self.temp_file_manager = TempFileManager()
-        
+
         # Enhanced LLM service
         self.llm_service = LLMService(config)  # Real LLM service
-    
+
     def solve(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Enhanced solve method with intelligent mode selection."""
-        
+
         query = request.get('query', '')
         explicit_mode = request.get('mode')
-        
+
         # Use intelligent mode selection if no explicit mode
         if not explicit_mode:
             mode = self.mode_selector.select_mode(query, request.get('context'))
         else:
             mode = explicit_mode
-        
+
         # Route to appropriate research method
         return self._route_to_research_method(mode, request)
 ```
@@ -494,7 +494,7 @@ assert result4["data"]["sources_used"] > result1["data"]["sources_used"]
 ### LLM Service Enhancement
 - [ ] Create BaseProvider abstract class
 - [ ] Implement OllamaProvider
-- [ ] Implement OpenAIProvider  
+- [ ] Implement OpenAIProvider
 - [ ] Implement AnthropicProvider
 - [ ] Create ModelDetector for intelligent model selection
 - [ ] Enhance CoreLLMService with multi-provider support

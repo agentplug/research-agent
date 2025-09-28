@@ -5,28 +5,33 @@ This module provides the core LLM service functionality with AISuite integration
 for unified access to multiple LLM providers.
 """
 
-from .core import LLMService, get_shared_llm_service, reset_shared_llm_service
 from .client_manager import ClientManager
+from .core import LLMService, get_shared_llm_service, reset_shared_llm_service
+from .model_config import (
+    IntermediateResult,
+    ModelConfig,
+    ModelInfo,
+    ResearchData,
+    SessionInfo,
+    SourceInfo,
+)
 from .model_detector import ModelDetector
-from .model_config import ModelConfig, ModelInfo, SourceInfo, SessionInfo, ResearchData, IntermediateResult
 
 __all__ = [
     # Core LLM Service
-    'LLMService',
-    'get_shared_llm_service',
-    'reset_shared_llm_service',
-    
+    "LLMService",
+    "get_shared_llm_service",
+    "reset_shared_llm_service",
     # Components
-    'ClientManager',
-    'ModelDetector',
-    'ModelConfig',
-    
+    "ClientManager",
+    "ModelDetector",
+    "ModelConfig",
     # Data Classes
-    'ModelInfo',
-    'SourceInfo',
-    'SessionInfo',
-    'ResearchData',
-    'IntermediateResult',
+    "ModelInfo",
+    "SourceInfo",
+    "SessionInfo",
+    "ResearchData",
+    "IntermediateResult",
 ]
 
 __version__ = "2.0.0"

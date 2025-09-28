@@ -1,6 +1,6 @@
 ---
 description: When have requirement and analysis, you need to convert and develop a system design
-globs: 
+globs:
 alwaysApply: false
 ---
 # Architecture Design Framework - Human-AI Expert Collaboration

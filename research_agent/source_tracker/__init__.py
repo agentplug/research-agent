@@ -8,7 +8,7 @@ for research sources across different rounds and sessions.
 from .core import SourceTracker
 
 __all__ = [
-    'SourceTracker',
+    "SourceTracker",
 ]
 
 __version__ = "2.0.0"

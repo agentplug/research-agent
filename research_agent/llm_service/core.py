@@ -6,13 +6,13 @@ using AISuite for unified provider access.
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional, Union
 
-from .client_manager import ClientManager
-from .model_detector import ModelDetector
-from .model_config import ModelInfo
 from ..base_agent.error_handler import ErrorHandler
 from ..utils.utils import format_response
+from .client_manager import ClientManager
+from .model_config import ModelInfo
+from .model_detector import ModelDetector
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ _shared_llm_service: Optional["LLMService"] = None
 class LLMService:
     """
     LLM service with AISuite integration for real provider access.
-    
+
     Features:
     - AISuite integration for unified provider access
     - Automatic model detection and selection
@@ -31,24 +31,26 @@ class LLMService:
     - Shared instance management
     - Research mode-specific optimization
     """
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None, model: Optional[str] = None):
+
+    def __init__(
+        self, config: Optional[Dict[str, Any]] = None, model: Optional[str] = None
+    ):
         """
         Initialize LLM service.
-        
+
         Args:
             config: Configuration dictionary
             model: Specific model to use (e.g., "ollama:llama3.1:8b")
         """
         self.config = config or {}
         self.error_handler = ErrorHandler("LLMService")
-        
+
         # Initialize components
         self.model_detector = ModelDetector()
         self.client_manager = ClientManager()
         self.cache: Dict[str, Any] = {}
         self._model_info: Optional[ModelInfo] = None
-        
+
         # Determine model to use
         if model:
             self.model = model
@@ -56,31 +58,31 @@ class LLMService:
         else:
             self.model = self.model_detector.detect_best_model()
             logger.info(f"🎯 Auto-selected model: {self.model}")
-        
+
         # Initialize client
         self.client = self.client_manager.initialize_client(self.model)
-        
+
         self.service_type = "real"
         self.initialized = True
-    
+
     def generate(
         self,
-        input_data: str | list[dict],
-        system_prompt: str | None = None,
+        input_data: Union[str, List[Dict[str, Any]]],
+        system_prompt: Optional[str] = None,
         return_json: bool = False,
         temperature: float = 0.0,
         **kwargs: Any,
     ) -> str:
         """
         Generate response using AISuite with research mode optimization.
-        
+
         Args:
             input_data: Either a string (single prompt) or list of messages
             system_prompt: Optional system prompt to define AI behavior
             return_json: If True, request JSON response from AISuite
             temperature: Controls randomness (0.0 = deterministic, 1.0 = creative)
             **kwargs: Additional parameters for AISuite
-            
+
         Returns:
             Generated text response from LLM
         """
@@ -126,7 +128,7 @@ class LLMService:
                     messages=messages,
                     **request_kwargs,
                 )
-                
+
                 if hasattr(response, "choices") and response.choices:
                     return str(response.choices[0].message.content)
                 else:
@@ -144,7 +146,7 @@ class LLMService:
                     messages=messages,
                     **request_kwargs,
                 )
-                
+
                 if hasattr(response, "choices") and response.choices:
                     return str(response.choices[0].message.content)
                 else:
@@ -152,44 +154,44 @@ class LLMService:
                     return self._fallback_response()
             else:
                 raise ValueError("input_data must be string or list")
-                
+
         except Exception as e:
             logger.error(f"AISuite generation failed: {e}")
             return self._fallback_response()
-    
+
     def _get_mode_settings(self, mode: str) -> Dict[str, Any]:
         """Get mode-specific settings."""
         mode_settings = {
-            'instant': {'temperature': 0.1, 'max_tokens': 500},
-            'quick': {'temperature': 0.2, 'max_tokens': 1000},
-            'standard': {'temperature': 0.2, 'max_tokens': 1500},
-            'deep': {'temperature': 0.3, 'max_tokens': 2000}
+            "instant": {"temperature": 0.1, "max_tokens": 500},
+            "quick": {"temperature": 0.2, "max_tokens": 1000},
+            "standard": {"temperature": 0.2, "max_tokens": 1500},
+            "deep": {"temperature": 0.3, "max_tokens": 2000},
         }
-        return mode_settings.get(mode, {'temperature': 0.2, 'max_tokens': 1000})
-    
+        return mode_settings.get(mode, {"temperature": 0.2, "max_tokens": 1000})
+
     def _get_system_prompt(self, mode: str) -> str:
         """Get system prompt for research mode."""
         system_prompts = {
-            'instant': "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information.",
-            'quick': "You are a research assistant for QUICK research mode. Analyze data and provide enhanced answers with context. Include relevant details and insights.",
-            'standard': "You are a research assistant for STANDARD research mode. Conduct comprehensive research with multiple rounds of analysis. Provide thorough, well-structured responses.",
-            'deep': "You are a research assistant for DEEP research mode. Conduct exhaustive research with clarification and comprehensive analysis. Provide detailed, well-researched responses with full context."
+            "instant": "You are a research assistant for INSTANT research mode. Provide quick, accurate answers based on available data. Focus on key facts and essential information.",
+            "quick": "You are a research assistant for QUICK research mode. Analyze data and provide enhanced answers with context. Include relevant details and insights.",
+            "standard": "You are a research assistant for STANDARD research mode. Conduct comprehensive research with multiple rounds of analysis. Provide thorough, well-structured responses.",
+            "deep": "You are a research assistant for DEEP research mode. Conduct exhaustive research with clarification and comprehensive analysis. Provide detailed, well-researched responses with full context.",
         }
         return system_prompts.get(mode, "You are a helpful research assistant.")
-    
+
     def _build_user_prompt(self, query: str, mode: str) -> str:
         """Build user prompt for research mode."""
         mode_prompts = {
-            'instant': f"Provide a concise, factual answer to: {query}",
-            'quick': f"Provide enhanced analysis with context for: {query}",
-            'standard': f"Conduct comprehensive research with multiple perspectives on: {query}",
-            'deep': f"Conduct exhaustive research with academic-level analysis on: {query}"
+            "instant": f"Provide a concise, factual answer to: {query}",
+            "quick": f"Provide enhanced analysis with context for: {query}",
+            "standard": f"Conduct comprehensive research with multiple perspectives on: {query}",
+            "deep": f"Conduct exhaustive research with academic-level analysis on: {query}",
         }
         return mode_prompts.get(mode, f"Answer: {query}")
-    
+
     def _organize_messages_to_aisuite_format(
-        self, messages: list[dict], system_prompt: str | None = None
-    ) -> list[dict]:
+        self, messages: List[Dict[str, Any]], system_prompt: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Organize messages for AISuite format."""
         organized_messages = []
 
@@ -222,62 +224,59 @@ class LLMService:
             return model.split(":")[0]
         return "unknown"
 
-    
-    def get_available_models(self) -> List[Dict[str, Any]]:
+    def get_available_models(self) -> List[ModelInfo]:
         """Get all available models."""
         try:
             return self.model_detector.list_available_models()
         except Exception as e:
-            self.error_handler.log_error(e, {'component': 'get_models'})
+            self.error_handler.log_error(e, {"component": "get_models"})
             return []
-    
+
     def get_service_status(self) -> Dict[str, Any]:
         """Get service status."""
         return {
-            'status': 'operational',
-            'type': 'real',
-            'model': self.model,
-            'provider': self._get_provider_name(self.model),
-            'is_local': self.model_detector.is_local_model(self.model),
-            'client_available': self.client is not None,
-            'initialized': self.initialized
+            "status": "operational",
+            "type": "real",
+            "model": self.model,
+            "provider": self._get_provider_name(self.model),
+            "is_local": self.model_detector.is_local_model(self.model),
+            "client_available": self.client is not None,
+            "initialized": self.initialized,
         }
-    
+
     def get_model_info(self) -> ModelInfo:
         """Get information about the current model."""
         if not self._model_info:
             self._model_info = self.model_detector.create_model_info(
-                self.model, 
-                is_local=self.model_detector.is_local_model(self.model)
+                self.model, is_local=self.model_detector.is_local_model(self.model)
             )
         return self._model_info
 
 
 # Shared instance management (AgentHub pattern)
 def get_shared_llm_service(
-    config: Optional[Dict[str, Any]] = None,
-    model: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None, model: Optional[str] = None
 ) -> LLMService:
     """
     Get or create a shared LLM service instance.
-    
+
     This prevents duplicate model detection and reduces initialization overhead.
-    
+
     Args:
         config: Configuration dictionary
         model: Specific model to use
-        
+
     Returns:
         Shared LLMService instance
     """
     global _shared_llm_service
-    
+
     if _shared_llm_service is None:
         logger.debug("Created shared LLMService instance")
         _shared_llm_service = LLMService(config=config, model=model)
     else:
         logger.debug("Reusing shared LLMService instance")
-    
+
     return _shared_llm_service
 
 

@@ -8,7 +8,7 @@ based on complexity analysis and context-aware decision making.
 from .core import ModeSelector
 
 __all__ = [
-    'ModeSelector',
+    "ModeSelector",
 ]
 
 __version__ = "2.0.0"

@@ -29,14 +29,14 @@ research_agent/llm_service/
 ```python
 class CoreLLMService:
     """Mock LLM service for Phase 1 testing"""
-    
+
     def __init__(self):
         self.mock_responses = MockResponses()
-    
+
     def generate(self, prompt: str, **kwargs) -> str:
         """Generate mock response based on prompt"""
         return self.mock_responses.get_response(prompt, **kwargs)
-    
+
     def generate_research_analysis(self, question: str, data: List[Dict], analysis_type: str) -> str:
         """Generate mock research analysis"""
         return self.mock_responses.get_analysis_response(question, analysis_type)
@@ -56,25 +56,25 @@ class CoreLLMService:
 ```python
 class MockResponses:
     """Mock response data and templates"""
-    
+
     INSTANT_RESPONSES = [
         "Based on available data, {question} can be answered as follows: [Mock instant response]",
         "Quick answer to {question}: [Mock instant response]",
         "Direct response to {question}: [Mock instant response]"
     ]
-    
+
     QUICK_RESPONSES = [
         "Enhanced analysis of {question}: [Mock quick response with context]",
         "Comprehensive answer to {question}: [Mock quick response with details]",
         "Detailed response to {question}: [Mock quick response with insights]"
     ]
-    
+
     STANDARD_RESPONSES = [
         "Thorough analysis of {question}: [Mock standard response with comprehensive coverage]",
         "In-depth research on {question}: [Mock standard response with multiple perspectives]",
         "Comprehensive study of {question}: [Mock standard response with detailed analysis]"
     ]
-    
+
     DEEP_RESPONSES = [
         "Exhaustive research on {question}: [Mock deep response with academic-level analysis]",
         "Comprehensive analysis of {question}: [Mock deep response with clarification questions]",
@@ -182,8 +182,8 @@ response = llm_service.generate("What is artificial intelligence?")
 
 # Generate research analysis
 analysis = llm_service.generate_research_analysis(
-    "AI ethics", 
-    [{"title": "Mock source", "content": "Mock content"}], 
+    "AI ethics",
+    [{"title": "Mock source", "content": "Mock content"}],
     "comprehensive"
 )
 ```

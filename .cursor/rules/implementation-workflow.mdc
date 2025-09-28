@@ -1,6 +1,6 @@
 ---
 description: Call when do implementation based on implementation design
-globs: 
+globs:
 alwaysApply: false
 ---
 # Implementation Workflow - Senior Software Engineer Coding Process
