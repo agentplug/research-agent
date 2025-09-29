@@ -27,7 +27,9 @@ print("=" * 80)
 print(f"\n📊 STEP 1: First Round")
 print("=" * 80)
 
-first_round = agent.research_workflows.execute_first_round(query, "standard")
+first_round = agent.research_workflows.research_executor.execute_first_round(
+    query, "standard"
+)
 
 print(f"✅ First round completed")
 print(f"Tools used: {first_round.get('tools_used', [])}")
@@ -60,11 +62,17 @@ if tool_results:
 print(f"\n📝 First Round Final Content:")
 print(f"{first_round.get('content', 'No content')}")
 
+# Show URL tracking after first round
+exclude_urls = (
+    agent.research_workflows.research_executor.source_tracker.get_exclude_urls("urls")
+)
+print(f"\n🔗 URLs tracked after Round 1: {exclude_urls}")
+
 # Step 2: Test follow-up round
 print(f"\n📊 STEP 2: Follow-up Round")
 print("=" * 80)
 
-follow_up = agent.research_workflows.execute_followup_round(
+follow_up = agent.research_workflows.research_executor.execute_followup_round(
     original_query=query, previous_results=[first_round], mode="standard"
 )
 
@@ -99,19 +107,28 @@ if tool_results:
 print(f"\n📝 Follow-up Round Final Content:")
 print(f"{follow_up.get('content', 'No content')}")
 
-# Step 3: Test full standard research
+# Show URL tracking after follow-up round
+exclude_urls = (
+    agent.research_workflows.research_executor.source_tracker.get_exclude_urls("urls")
+)
+print(f"\n🔗 URLs tracked after Round 2: {exclude_urls}")
+
+# Step 3: Test full standard research (this will run 3 rounds total)
 print(f"\n📊 STEP 3: Full Standard Research")
+print("=" * 80)
+print("ℹ️  Note: This will run 3 rounds total (1 first + 2 follow-up)")
+print("ℹ️  Each round will process sources independently")
 print("=" * 80)
 
 full_result = agent.standard_research(query)
 
-if full_result.get("success"):
-    data = full_result["data"]
-    content = data.get("content", {})
-    rounds = content.get("rounds", [])
+if "rounds" in full_result:
+    rounds = full_result.get("rounds", [])
 
     print(f"✅ Full research completed")
-    print(f"Total rounds: {content.get('total_rounds', 'N/A')}")
+    print(f"Total rounds: {full_result.get('total_rounds', 'N/A')}")
+    print(f"Mode: {full_result.get('mode', 'N/A')}")
+    print(f"Research summary: {full_result.get('research_summary', 'N/A')}")
 
     for i, round_data in enumerate(rounds, 1):
         print(f"\n🔍 Round {i} Summary:")
@@ -119,3 +136,4 @@ if full_result.get("success"):
         print(f"   Content preview: {round_data.get('content', 'No content')[:200]}...")
 else:
     print(f"❌ Full research failed: {full_result.get('error', 'Unknown error')}")
+    print(f"Full result: {full_result}")
