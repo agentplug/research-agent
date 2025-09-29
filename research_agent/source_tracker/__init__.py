@@ -5,7 +5,7 @@ This module provides URL normalization, deduplication, and metadata management
 for research sources across different rounds and sessions.
 """
 
-from .core import SourceTracker
+from .source_tracker import SourceTracker
 
 __all__ = [
     "SourceTracker",
