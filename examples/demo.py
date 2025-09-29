@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Super Simple Demo - Instant Research
+Super Simple Demo - Research with URL Tracking
+
+This demo shows how the research agent automatically tracks URLs from previous rounds
+and includes them in exclude_urls parameter to avoid duplicate processing.
 """
 
 import os
@@ -38,13 +41,18 @@ tool_context = {
 agent = ResearchAgent(tool_context=tool_context)
 
 # Simple instant research call
-query = "Who is the current US president?"
+query = "Why Microsoft layoff this year?"
 print(f"🔍 Query: {query}")
 print("=" * 50)
 
 # # Call instant research
 # result = agent.instant_research(query)
 
+# Standard research will automatically:
+# 1. Track URLs from each round using SourceTracker
+# 2. Include them in exclude_urls for subsequent rounds to avoid duplicates
+# 3. Pass exclude_urls to MCP server web_search tool
+# 4. Process results with full content extraction
 result = agent.standard_research(query)
 
 # Display the final answer

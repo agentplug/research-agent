@@ -54,10 +54,14 @@ class ResearchExecutor:
         self.research_modes = ResearchModes()
 
         # Initialize tool analyzer with source processor
+        from ....source_tracker.source_tracker import SourceTracker
         from ..source_processing import SourceProcessor
 
         source_processor = SourceProcessor(llm_service)
         self.tool_analyzer = ToolAwareAnalyzer(llm_service, source_processor)
+
+        # Initialize source tracker for URL deduplication
+        self.source_tracker = SourceTracker()
 
     def execute_first_round(
         self,
@@ -79,9 +83,10 @@ class ResearchExecutor:
         # Build enhanced query with current year for "current" queries
         enhanced_query = self._enhance_query_with_context(query)
 
-        # Build system prompt
+        # Build system prompt with exclude URLs
+        exclude_urls = self.source_tracker.get_exclude_urls("urls")
         system_prompt = self.prompt_builder.build_tool_aware_system_prompt(
-            mode, enhanced_query
+            mode, enhanced_query, exclude_urls
         )
 
         # Add user intention if provided
@@ -174,9 +179,10 @@ Analyze the research progress and identify gaps. Generate a follow-up query to a
                 temperature=0.0,
             )
 
-            # Build system prompt for follow-up research
+            # Build system prompt for follow-up research with exclude URLs
+            exclude_urls = self.source_tracker.get_exclude_urls("urls")
             system_prompt = self.prompt_builder.build_tool_aware_system_prompt(
-                mode, follow_up_query
+                mode, follow_up_query, exclude_urls
             )
 
             # Build input with context
@@ -269,14 +275,50 @@ Please conduct follow-up research using the available tools to address the ident
             # Execute tool calls
             tool_results = []
             for tool_call in tool_calls:
-                result = self.tool_executor.execute_tool_call(tool_call)
+                result = self.tool_executor.execute_tool(tool_call)
                 tool_results.append(result)
+
+            # Track URLs from tool results for future exclusion
+            self._extract_and_track_urls(tool_results)
 
             return tool_results
 
         except Exception as e:
             # Log error but continue
             return []
+
+    def _extract_and_track_urls(self, tool_results: List[Dict[str, Any]]) -> None:
+        """
+        Extract URLs from tool results and track them for future exclusion.
+
+        Args:
+            tool_results: List of tool execution results
+        """
+        urls_to_track = []
+
+        for result in tool_results:
+            if not result.get("success", False):
+                continue
+
+            tool_result = result.get("result", {})
+
+            # Extract URLs from different tool result formats
+            if isinstance(tool_result, dict):
+                # Web search results format
+                if "results" in tool_result and isinstance(
+                    tool_result["results"], list
+                ):
+                    for item in tool_result["results"]:
+                        if isinstance(item, dict) and "url" in item:
+                            urls_to_track.append(item["url"])
+
+                # Single result format
+                elif "url" in tool_result:
+                    urls_to_track.append(tool_result["url"])
+
+        # Track URLs for future exclusion
+        if urls_to_track:
+            self.source_tracker.add_processed_urls(urls_to_track)
 
     def get_execution_statistics(self) -> Dict[str, Any]:
         """

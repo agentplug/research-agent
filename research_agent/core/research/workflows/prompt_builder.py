@@ -27,13 +27,16 @@ class PromptBuilder:
         self.available_tools = available_tools or []
         self.tool_descriptions = tool_descriptions or {}
 
-    def build_tool_aware_system_prompt(self, mode: str, query: str) -> str:
+    def build_tool_aware_system_prompt(
+        self, mode: str, query: str, exclude_urls: List[str] = None
+    ) -> str:
         """
         Build tool-aware system prompt for different research modes.
 
         Args:
             mode: Research mode (instant, quick, standard, deep)
             query: Research query
+            exclude_urls: URLs to exclude from searches
 
         Returns:
             Formatted system prompt
@@ -50,7 +53,7 @@ RESEARCH QUERY: {query}
 
 MANDATORY: Use tools for ALL research tasks. Do not rely solely on your training data.
 
-{self._build_tool_context_string()}"""
+{self._build_tool_context_string(exclude_urls)}"""
 
         if mode == "instant":
             return (
@@ -195,7 +198,7 @@ DEEP MODE ANALYSIS:
 
         return base_analysis
 
-    def _build_tool_context_string(self) -> str:
+    def _build_tool_context_string(self, exclude_urls: List[str] = None) -> str:
         """Build tool context string for system prompts."""
         if not self.available_tools:
             return ""
@@ -207,10 +210,22 @@ DEEP MODE ANALYSIS:
 
         tools_text = "\n".join(tool_descriptions)
 
+        # Add exclude URLs context if provided
+        exclude_context = ""
+        if exclude_urls:
+            exclude_context = f"""
+
+EXCLUDE URLS CONTEXT:
+The following URLs have already been processed in previous rounds and should be excluded:
+{', '.join(exclude_urls[:10])}  # Show first 10 URLs
+{'...' if len(exclude_urls) > 10 else ''}
+
+IMPORTANT: Always include these URLs in the exclude_urls parameter for web_search tool calls."""
+
         return f"""TOOL INTEGRATION CONTEXT:
 
 Available Tools:
-{tools_text}
+{tools_text}{exclude_context}
 
 CRITICAL TOOL USAGE RULES:
 1. **ALWAYS use tools for research tasks** - Do not rely on training data alone
@@ -219,6 +234,8 @@ CRITICAL TOOL USAGE RULES:
 4. **For current information queries**, use tools to get up-to-date data
 5. **For calculations**, use calculation tools when available
 6. **For document analysis**, use document retrieval tools when available
+7. **For web_search tool**, always include "exclude_urls" parameter (empty array [] if no exclusions needed)
+8. **For web_search tool**, use exclude_urls to filter out irrelevant or low-quality domains when appropriate
 
 TOOL CALL FORMAT:
 ```json
@@ -234,9 +251,10 @@ TOOL CALL FORMAT:
 ```
 
 EXAMPLES:
-- "What's the weather?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current weather today"}}}}}}
-- "Who is the president?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current US president"}}}}}}
+- "What's the weather?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current weather today", "exclude_urls": []}}}}}}
+- "Who is the president?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current US president", "exclude_urls": []}}}}}}
 - "Calculate 2+2" → {{"tool_call": {{"tool_name": "calculate", "arguments": {{"expression": "2+2"}}}}}}
+- "Search excluding specific sites" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "research topic", "exclude_urls": ["example.com", "spam-site.com"]}}}}}}
 
 MANDATORY: Use tools for ALL research tasks. Do not provide answers without tool usage."""
 
