@@ -1,8 +1,6 @@
+#!/usr/bin/env python3
 """
-Research Agent - Maximum Value Demo
-
-The simplest code to demonstrate all core functionality.
-Just run: python examples/demo.py
+Super Simple Demo - Instant Research
 """
 
 import os
@@ -10,55 +8,48 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agent import ResearchAgentHub
+from research_agent.research_agent.core import ResearchAgent
 
+# Initialize the agent with tools
+tool_context = {
+    "available_tools": ["web_search"],
+    "tool_descriptions": {
+        "web_search": "Search the web for a query with AI-powered query rewriting for better results"
+    },
+    "tool_usage_examples": {
+        "web_search": [
+            "Search for current information about topics",
+            "Find recent news and updates",
+        ]
+    },
+    "tool_parameters": {
+        "web_search": {
+            "query": {"type": "string", "description": "Search query"},
+            "exclude_urls": {
+                "type": "array",
+                "description": "URLs to exclude from results",
+                "default": [],
+            },
+        }
+    },
+    "tool_return_types": {"web_search": "object"},
+    "tool_namespaces": {"web_search": "mcp"},
+}
+agent = ResearchAgent(tool_context=tool_context)
 
-def main() -> None:
-    """One simple demo showing maximum value."""
-    print("🔬 Research Agent Demo")
-    print("=" * 30)
+# Simple instant research call
+query = "Who is the current US president?"
+print(f"🔍 Query: {query}")
+print("=" * 50)
 
-    # Initialize agent
-    agent = ResearchAgentHub()
-    if not agent.initialize_agent():
-        print("❌ Failed to initialize")
-        return
+# Call instant research
+result = agent.instant_research(query)
 
-    print("✅ Agent ready!")
-
-    # Test all modes with one question
-    question = "What is artificial intelligence?"
-
-    modes = [("instant", "⚡"), ("quick", "🚀"), ("standard", "📊"), ("deep", "🔍")]
-
-    for mode, icon in modes:
-        print(f"\n{icon} {mode.title()} research:")
-
-        if mode == "instant":
-            result = agent.instant_research(question)
-        elif mode == "quick":
-            result = agent.quick_research(question)
-        elif mode == "standard":
-            result = agent.standard_research(question)
-        elif mode == "deep":
-            result = agent.deep_research(question)
-
-        if result["success"]:
-            content = result["data"]["response"]["data"]["content"]
-            print(f"   {content[:60]}...")
-
-            # Show key metrics
-            rounds = result["data"]["research_rounds"]
-            sources = result["data"]["sources_used"]
-            print(f"   📊 {rounds} rounds, {sources} sources")
-        else:
-            print(f"   ❌ Failed: {result['message']}")
-
-    # Show agent capabilities
-    print(f"\n🎯 Agent capabilities: {len(agent.get_agent_status()['capabilities'])}")
-    print("✅ All research modes working!")
-    print("\n💡 Try: python agent.py --query 'Your question' --mode instant")
-
-
-if __name__ == "__main__":
-    main()
+# Display the final answer
+if result.get("success"):
+    print("\n🎯 FINAL ANSWER:")
+    print("=" * 50)
+    print(result["data"]["content"])
+else:
+    print("\n❌ ERROR:")
+    print(result.get("error", "Unknown error"))
