@@ -5,12 +5,12 @@ A comprehensive research agent with multiple research modes, intelligent mode se
 real LLM integration, source tracking, and temporary file management.
 """
 
-from .base_agent.core import BaseAgent
-from .llm_service import LLMService, get_shared_llm_service
-from .mode_selector import ModeSelector
-from .research_agent.core import ResearchAgent
-from .source_tracker import SourceTracker
-from .temp_file_manager import TempFileManager
+from .base_agent.base_agent import BaseAgent
+from .core.research_agent import ResearchAgent
+from .llm_service.llm_service import LLMService, get_shared_llm_service
+from .mode_selector.mode_selector import ModeSelector
+from .source_tracker.source_tracker import SourceTracker
+from .temp_file_manager.temp_file_manager import TempFileManager
 
 __all__ = [
     # Main Agent
