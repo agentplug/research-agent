@@ -86,21 +86,32 @@ class ToolExecutor:
         tool_calls = []
 
         try:
+            # Clean content by removing markdown code blocks
+            cleaned_content = content.strip()
+
+            # Remove markdown code blocks (```json ... ```)
+            if cleaned_content.startswith("```json") and cleaned_content.endswith(
+                "```"
+            ):
+                cleaned_content = cleaned_content[7:-3].strip()
+            elif cleaned_content.startswith("```") and cleaned_content.endswith("```"):
+                cleaned_content = cleaned_content[3:-3].strip()
+
             # Try to parse as JSON first
-            if content.strip().startswith("{") and content.strip().endswith("}"):
-                parsed_content = json.loads(content)
+            if cleaned_content.startswith("{") and cleaned_content.endswith("}"):
+                parsed_content = json.loads(cleaned_content)
                 if "tool_call" in parsed_content:
                     tool_calls.append(parsed_content["tool_call"])
                 elif isinstance(parsed_content, list):
                     tool_calls.extend(parsed_content)
 
             # Look for tool_call patterns in text
-            elif "tool_call" in content:
+            elif "tool_call" in cleaned_content:
                 # Extract JSON objects containing tool_call
                 import re
 
                 json_pattern = r'\{[^{}]*"tool_call"[^{}]*\}'
-                matches = re.findall(json_pattern, content)
+                matches = re.findall(json_pattern, cleaned_content)
 
                 for match in matches:
                     try:
