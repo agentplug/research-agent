@@ -9,7 +9,7 @@ import json
 import sys
 from typing import Any, Dict, Optional
 
-from research_agent.research_agent.core import ResearchAgent
+from research_agent import ResearchAgent
 
 
 def main():
