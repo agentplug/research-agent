@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from research_agent.research_agent.core import ResearchAgent
+from research_agent import ResearchAgent
 
 
 def main():
