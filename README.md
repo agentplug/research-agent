@@ -36,7 +36,7 @@ The agent follows a modular design with:
 
 ### Direct Usage
 ```python
-from research_agent.research_agent.core import ResearchAgent
+from research_agent import ResearchAgent
 
 # Initialize agent directly
 agent = ResearchAgent()

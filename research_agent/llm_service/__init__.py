@@ -6,7 +6,7 @@ for unified access to multiple LLM providers.
 """
 
 from .client_manager import ClientManager
-from .core import LLMService, get_shared_llm_service, reset_shared_llm_service
+from .llm_service import LLMService, get_shared_llm_service, reset_shared_llm_service
 from .model_config import (
     IntermediateResult,
     ModelConfig,

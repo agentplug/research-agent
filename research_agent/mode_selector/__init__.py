@@ -5,7 +5,7 @@ This module provides intelligent mode selection for research queries
 based on complexity analysis and context-aware decision making.
 """
 
-from .core import ModeSelector
+from .mode_selector import ModeSelector
 
 __all__ = [
     "ModeSelector",

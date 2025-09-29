@@ -9,7 +9,7 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
-from ...llm_service.core import LLMService
+from ...llm_service.llm_service import LLMService
 
 
 class ClarificationEngine:
