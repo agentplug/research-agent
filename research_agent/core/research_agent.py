@@ -9,17 +9,17 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..base_agent.agenthub_base import AgentHubBaseAgent
+from ..base_agent.base_agent import BaseAgent
 from ..base_agent.error_handler import ErrorHandler
-from ..llm_service.core import get_shared_llm_service
+from ..llm_service.llm_service import get_shared_llm_service
+from ..utils.helpers import ResearchHelpers
 from ..utils.utils import format_response, get_current_timestamp
 from .analysis.tool_aware_analyzer import ToolAwareAnalysisEngine
 from .clarification import ClarificationEngine, IntentionGenerator
-from .research.tool_aware_workflows import ToolAwareResearchWorkflows
-from .utils import ResearchHelpers
+from .research.workflows import ResearchWorkflows
 
 
-class ResearchAgent(AgentHubBaseAgent):
+class ResearchAgent(BaseAgent):
     """
     Enhanced research agent with clarification system - KISS & YAGNI implementation.
     """
@@ -30,15 +30,16 @@ class ResearchAgent(AgentHubBaseAgent):
         config_path: Optional[str] = None,
         tool_context: Optional[Dict[str, Any]] = None,
     ):
-        """Initialize with AgentHub tool context."""
-        super().__init__(tool_context)
+        """Initialize with tool context and configuration."""
+        # Initialize parent first
+        super().__init__(tool_context=tool_context, logger_name="ResearchAgent")
 
-        # Initialize existing components
+        # Load config after parent initialization
         self.config_path = config_path or "config.json"
         self.config = self._load_config(self.config_path)
-        self.model = model
-        self.error_handler = ErrorHandler("ResearchAgent")
 
+        # Initialize existing components
+        self.model = model
         self.llm_service = get_shared_llm_service(model=model)
         self.research_history: List[Dict[str, Any]] = []
 
@@ -48,7 +49,7 @@ class ResearchAgent(AgentHubBaseAgent):
         )
         self.clarification_engine = ClarificationEngine(self.llm_service)
         self.intention_generator = IntentionGenerator(self.llm_service)
-        self.research_workflows = ToolAwareResearchWorkflows(
+        self.research_workflows = ResearchWorkflows(
             self.llm_service,
             self.analysis_engine,
             self.clarification_engine,
@@ -75,30 +76,6 @@ class ResearchAgent(AgentHubBaseAgent):
             if hasattr(self, "error_handler"):
                 self.error_handler.log_error(f"Failed to load config: {e}")
             return {}
-
-    def process_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """Required abstract method implementation."""
-        query = request.get("query", "")
-        mode = request.get("mode", "instant")
-        user_clarification = request.get("user_clarification", "")
-
-        if not self.helpers.validate_mode(mode):
-            from ..utils.utils import format_response
-
-            return format_response(
-                success=False,
-                data={"error": f"Unknown mode: {mode}"},
-                message="Invalid research mode",
-            )
-
-        if mode == "instant":
-            return self.instant_research(query)
-        elif mode == "quick":
-            return self.quick_research(query)
-        elif mode == "standard":
-            return self.standard_research(query)
-        elif mode == "deep":
-            return self.deep_research(query, user_clarification)
 
     def instant_research(self, query: str) -> Dict[str, Any]:
         """Conduct instant research - single round quick answer."""

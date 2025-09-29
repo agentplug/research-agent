@@ -8,7 +8,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from research_agent.research_agent.core import ResearchAgent
+from research_agent import ResearchAgent
 
 # Initialize the agent with tools
 tool_context = {
@@ -42,14 +42,20 @@ query = "Who is the current US president?"
 print(f"🔍 Query: {query}")
 print("=" * 50)
 
-# Call instant research
-result = agent.instant_research(query)
+# # Call instant research
+# result = agent.instant_research(query)
+
+result = agent.standard_research(query)
 
 # Display the final answer
-if result.get("success"):
+if isinstance(result, dict) and "rounds" in result:
     print("\n🎯 FINAL ANSWER:")
     print("=" * 50)
-    print(result["data"]["content"])
+    print(result)
 else:
     print("\n❌ ERROR:")
-    print(result.get("error", "Unknown error"))
+    print(
+        result.get("error", "Unknown error")
+        if isinstance(result, dict)
+        else str(result)
+    )

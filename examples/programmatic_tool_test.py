@@ -5,7 +5,7 @@ Programmatic Tool Integration Testing
 This script shows how to test tool integration programmatically.
 """
 
-from research_agent.research_agent.core import ResearchAgent
+from research_agent import ResearchAgent
 
 
 def test_programmatic_tool_integration():
