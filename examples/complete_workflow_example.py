@@ -9,12 +9,17 @@ This example demonstrates the complete workflow:
 4. Results are processed with full content extraction
 """
 
+import logging
 import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from research_agent import ResearchAgent
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Initialize the agent with tools configured for MCP server
 tool_context = {
@@ -46,36 +51,36 @@ agent = ResearchAgent(tool_context=tool_context)
 
 # Example query
 query = "What are the latest developments in AI research?"
-print(f"🔍 Research Query: {query}")
-print("=" * 60)
+logger.info(f"🔍 Research Query: {query}")
+logger.info("=" * 60)
 
-print("\n📋 Workflow Overview:")
-print("1. Round 1: Search with empty exclude_urls")
-print("2. URLs from Round 1 are tracked in SourceTracker")
-print("3. Round 2: Search with exclude_urls from Round 1")
-print("4. URLs from Round 2 are added to tracking")
-print("5. Round 3: Search with exclude_urls from Rounds 1 & 2")
-print("6. Final synthesis of all unique results")
+logger.info("\n📋 Workflow Overview:")
+logger.info("1. Round 1: Search with empty exclude_urls")
+logger.info("2. URLs from Round 1 are tracked in SourceTracker")
+logger.info("3. Round 2: Search with exclude_urls from Round 1")
+logger.info("4. URLs from Round 2 are added to tracking")
+logger.info("5. Round 3: Search with exclude_urls from Rounds 1 & 2")
+logger.info("6. Final synthesis of all unique results")
 
-print("\n🚀 Starting multi-round research...")
-print("=" * 60)
+logger.info("\n🚀 Starting multi-round research...")
+logger.info("=" * 60)
 
 # Run standard research (3 rounds)
 result = agent.standard_research(query)
 
 # Display results
 if isinstance(result, dict) and "rounds" in result:
-    print(f"\n✅ Research completed in {len(result['rounds'])} rounds")
-    print("=" * 60)
+    logger.info(f"\n✅ Research completed in {len(result['rounds'])} rounds")
+    logger.info("=" * 60)
 
     for i, round_data in enumerate(result["rounds"], 1):
-        print(f"\n📊 Round {i}:")
-        print(f"Query: {round_data.get('query', 'N/A')}")
-        print(f"Content: {round_data.get('content', 'N/A')[:200]}...")
+        logger.info(f"\n📊 Round {i}:")
+        logger.info(f"Query: {round_data.get('query', 'N/A')}")
+        logger.info(f"Content: {round_data.get('content', 'N/A')[:200]}...")
 
-    print(f"\n🎯 Final Answer:")
-    print("=" * 60)
-    print(result.get("content", "No final answer available"))
+    logger.info(f"\n🎯 Final Answer:")
+    logger.info("=" * 60)
+    logger.info(result.get("content", "No final answer available"))
 
     # Show URL tracking statistics
     if hasattr(agent, "research_workflows") and hasattr(
@@ -84,16 +89,16 @@ if isinstance(result, dict) and "rounds" in result:
         stats = (
             agent.research_workflows.research_executor.source_tracker.get_statistics()
         )
-        print(f"\n📈 URL Tracking Statistics:")
-        print(f"Total URLs processed: {stats['data']['processed_urls_count']}")
-        print(f"Unique domains: {stats['data']['processed_domains_count']}")
+        logger.info(f"\n📈 URL Tracking Statistics:")
+        logger.info(f"Total URLs processed: {stats['data']['processed_urls_count']}")
+        logger.info(f"Unique domains: {stats['data']['processed_domains_count']}")
 
 else:
-    print("\n❌ Error:")
-    print(
+    logger.info("\n❌ Error:")
+    logger.info(
         result.get("error", "Unknown error")
         if isinstance(result, dict)
         else str(result)
     )
 
-print("\n🎉 Complete workflow example finished!")
+logger.info("\n🎉 Complete workflow example finished!")
