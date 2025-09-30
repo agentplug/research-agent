@@ -6,12 +6,17 @@ This demo shows how the research agent automatically tracks URLs from previous r
 and includes them in exclude_urls parameter to avoid duplicate processing.
 """
 
+import logging
 import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from research_agent import ResearchAgent
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Initialize the agent with tools
 tool_context = {
@@ -42,8 +47,8 @@ agent = ResearchAgent(tool_context=tool_context)
 
 # Simple instant research call
 query = "Why Microsoft layoff this year?"
-print(f"🔍 Query: {query}")
-print("=" * 50)
+logger.info(f"🔍 Query: {query}")
+logger.info("=" * 50)
 
 # # Call instant research
 # result = agent.instant_research(query)
@@ -57,12 +62,12 @@ result = agent.standard_research(query)
 
 # Display the final answer
 if isinstance(result, dict) and "rounds" in result:
-    print("\n🎯 FINAL ANSWER:")
-    print("=" * 50)
-    print(result)
+    logger.info("\n🎯 FINAL ANSWER:")
+    logger.info("=" * 50)
+    logger.info(result)
 else:
-    print("\n❌ ERROR:")
-    print(
+    logger.info("\n❌ ERROR:")
+    logger.info(
         result.get("error", "Unknown error")
         if isinstance(result, dict)
         else str(result)
