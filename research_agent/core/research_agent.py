@@ -6,6 +6,7 @@ Direct AgentHub interface - no unnecessary wrapper classes.
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -17,6 +18,9 @@ from ..utils.utils import format_response, get_current_timestamp
 from .analysis.tool_aware_analyzer import ToolAwareAnalysisEngine
 from .clarification import ClarificationEngine, IntentionGenerator
 from .research.workflows import ResearchWorkflows
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 
 class ResearchAgent(BaseAgent):
@@ -111,18 +115,18 @@ class ResearchAgent(BaseAgent):
 
             if result["data"].get("clarification_needed", False):
                 # Step 2: Display questions and get user input
-                print("\n" + "=" * 60)
-                print("🧠 DEEP RESEARCH CLARIFICATION")
-                print("=" * 60)
-                print(f"Query: {query}")
-                print(
+                logger.info("\n" + "=" * 60)
+                logger.info("🧠 DEEP RESEARCH CLARIFICATION")
+                logger.info("=" * 60)
+                logger.info(f"Query: {query}")
+                logger.info(
                     "\nTo provide the most comprehensive research, please answer these questions:"
                 )
-                print()
+                logger.info("")
 
                 questions = result["data"].get("clarification_questions", "")
-                print(questions)
-                print()
+                logger.info(questions)
+                logger.info("")
 
                 # Get user input
                 user_clarification = input(
@@ -131,7 +135,7 @@ class ResearchAgent(BaseAgent):
 
                 if not user_clarification:
                     user_clarification = "No specific clarifications provided. Please conduct comprehensive research."
-                    print(
+                    logger.info(
                         "No clarification provided. Proceeding with comprehensive research..."
                     )
                 else:
@@ -139,7 +143,7 @@ class ResearchAgent(BaseAgent):
                     contextual_response = self._generate_contextual_response(
                         query, user_clarification
                     )
-                    print(f"\n{contextual_response}")
+                    logger.info(f"\n{contextual_response}")
 
         # Execute research with clarification
         result = self.research_workflows.deep_research(query, user_clarification)
