@@ -6,14 +6,19 @@ This script provides various ways to test the tool integration functionality.
 """
 
 import json
+import logging
 import subprocess
 import sys
 from typing import Any, Dict, List
 
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 def test_web_search_tool():
     """Test web search tool integration."""
-    print("🔍 Testing Web Search Tool...")
+    logger.info("🔍 Testing Web Search Tool...")
 
     input_data = {
         "method": "instant_research",
@@ -34,14 +39,14 @@ def test_web_search_tool():
     if result.get("success", False):
         content = result.get("data", {}).get("content", "")
         if "web_search" in content and "TOOL RESULTS" in content:
-            print("✅ Web Search Tool Test PASSED")
-            print(f"   Tool was used and results integrated")
+            logger.info("✅ Web Search Tool Test PASSED")
+            logger.info(f"   Tool was used and results integrated")
             return True
         else:
-            print("❌ Web Search Tool Test FAILED - Tool not used")
+            logger.info("❌ Web Search Tool Test FAILED - Tool not used")
             return False
     else:
-        print(
+        logger.info(
             f"❌ Web Search Tool Test FAILED - {result.get('data', {}).get('error', 'Unknown error')}"
         )
         return False
@@ -49,7 +54,7 @@ def test_web_search_tool():
 
 def test_calculation_tool():
     """Test calculation tool integration."""
-    print("\n🧮 Testing Calculation Tool...")
+    logger.info("\n🧮 Testing Calculation Tool...")
 
     input_data = {
         "method": "instant_research",
@@ -66,14 +71,14 @@ def test_calculation_tool():
     if result.get("success", False):
         content = result.get("data", {}).get("content", "")
         if "calculate" in content and "TOOL RESULTS" in content and "120" in content:
-            print("✅ Calculation Tool Test PASSED")
-            print(f"   Tool was used and calculation performed correctly")
+            logger.info("✅ Calculation Tool Test PASSED")
+            logger.info(f"   Tool was used and calculation performed correctly")
             return True
         else:
-            print("❌ Calculation Tool Test FAILED - Tool not used or incorrect result")
+            logger.info("❌ Calculation Tool Test FAILED - Tool not used or incorrect result")
             return False
     else:
-        print(
+        logger.info(
             f"❌ Calculation Tool Test FAILED - {result.get('data', {}).get('error', 'Unknown error')}"
         )
         return False
@@ -81,7 +86,7 @@ def test_calculation_tool():
 
 def test_multiple_tools():
     """Test multiple tools in one research."""
-    print("\n🔧 Testing Multiple Tools...")
+    logger.info("\n🔧 Testing Multiple Tools...")
 
     input_data = {
         "method": "quick_research",
@@ -112,14 +117,14 @@ def test_multiple_tools():
             tools_used.append("calculate")
 
         if len(tools_used) >= 1:
-            print("✅ Multiple Tools Test PASSED")
-            print(f"   Tools used: {tools_used}")
+            logger.info("✅ Multiple Tools Test PASSED")
+            logger.info(f"   Tools used: {tools_used}")
             return True
         else:
-            print("❌ Multiple Tools Test FAILED - No tools used")
+            logger.info("❌ Multiple Tools Test FAILED - No tools used")
             return False
     else:
-        print(
+        logger.info(
             f"❌ Multiple Tools Test FAILED - {result.get('data', {}).get('error', 'Unknown error')}"
         )
         return False
@@ -127,7 +132,7 @@ def test_multiple_tools():
 
 def test_deep_research_with_tools():
     """Test deep research with tool integration."""
-    print("\n🧠 Testing Deep Research with Tools...")
+    logger.info("\n🧠 Testing Deep Research with Tools...")
 
     input_data = {
         "method": "deep_research",
@@ -160,17 +165,17 @@ def test_deep_research_with_tools():
                 tools_used_in_rounds.extend(round_tools)
 
             if tools_used_in_rounds:
-                print("✅ Deep Research with Tools Test PASSED")
-                print(f"   Tools used across rounds: {list(set(tools_used_in_rounds))}")
+                logger.info("✅ Deep Research with Tools Test PASSED")
+                logger.info(f"   Tools used across rounds: {list(set(tools_used_in_rounds))}")
                 return True
             else:
-                print("❌ Deep Research with Tools Test FAILED - No tools used")
+                logger.info("❌ Deep Research with Tools Test FAILED - No tools used")
                 return False
         else:
-            print("❌ Deep Research with Tools Test FAILED - Unexpected content format")
+            logger.info("❌ Deep Research with Tools Test FAILED - Unexpected content format")
             return False
     else:
-        print(
+        logger.info(
             f"❌ Deep Research with Tools Test FAILED - {result.get('data', {}).get('error', 'Unknown error')}"
         )
         return False
@@ -178,7 +183,7 @@ def test_deep_research_with_tools():
 
 def test_agent_status():
     """Test agent status with tool information."""
-    print("\n📊 Testing Agent Status...")
+    logger.info("\n📊 Testing Agent Status...")
 
     input_data = {
         "method": "get_agent_status",
@@ -201,14 +206,14 @@ def test_agent_status():
     if result.get("success", False):
         tool_info = result.get("data", {}).get("tool_integration", {})
         if tool_info.get("has_tools", False) and tool_info.get("tool_count", 0) == 2:
-            print("✅ Agent Status Test PASSED")
-            print(f"   Tools detected: {tool_info.get('available_tools', [])}")
+            logger.info("✅ Agent Status Test PASSED")
+            logger.info(f"   Tools detected: {tool_info.get('available_tools', [])}")
             return True
         else:
-            print("❌ Agent Status Test FAILED - Tool information not found")
+            logger.info("❌ Agent Status Test FAILED - Tool information not found")
             return False
     else:
-        print(
+        logger.info(
             f"❌ Agent Status Test FAILED - {result.get('data', {}).get('error', 'Unknown error')}"
         )
         return False
@@ -216,7 +221,7 @@ def test_agent_status():
 
 def test_tool_usage_stats():
     """Test tool usage statistics."""
-    print("\n📈 Testing Tool Usage Stats...")
+    logger.info("\n📈 Testing Tool Usage Stats...")
 
     input_data = {
         "method": "get_tool_usage_stats",
@@ -239,15 +244,15 @@ def test_tool_usage_stats():
     if result.get("success", False):
         stats = result.get("data", {})
         if stats.get("has_tools", False) and stats.get("tool_count", 0) == 2:
-            print("✅ Tool Usage Stats Test PASSED")
-            print(f"   Available tools: {stats.get('available_tools', [])}")
-            print(f"   Total executions: {stats.get('total_executions', 0)}")
+            logger.info("✅ Tool Usage Stats Test PASSED")
+            logger.info(f"   Available tools: {stats.get('available_tools', [])}")
+            logger.info(f"   Total executions: {stats.get('total_executions', 0)}")
             return True
         else:
-            print("❌ Tool Usage Stats Test FAILED - Stats not found")
+            logger.info("❌ Tool Usage Stats Test FAILED - Stats not found")
             return False
     else:
-        print(
+        logger.info(
             f"❌ Tool Usage Stats Test FAILED - {result.get('data', {}).get('error', 'Unknown error')}"
         )
         return False
@@ -285,8 +290,8 @@ def execute_agent_call(input_data: Dict[str, Any]) -> Dict[str, Any]:
 
 def main():
     """Run comprehensive tool integration tests."""
-    print("🧪 COMPREHENSIVE TOOL INTEGRATION TEST SUITE")
-    print("=" * 60)
+    logger.info("🧪 COMPREHENSIVE TOOL INTEGRATION TEST SUITE")
+    logger.info("=" * 60)
 
     tests = [
         ("Web Search Tool", test_web_search_tool),
@@ -304,25 +309,25 @@ def main():
             success = test_func()
             results.append((test_name, success))
         except Exception as e:
-            print(f"❌ {test_name} Test FAILED with exception: {str(e)}")
+            logger.info(f"❌ {test_name} Test FAILED with exception: {str(e)}")
             results.append((test_name, False))
 
     # Summary
-    print(f"\n📋 TEST SUMMARY")
-    print("=" * 60)
+    logger.info(f"\n📋 TEST SUMMARY")
+    logger.info("=" * 60)
     passed = sum(1 for _, success in results if success)
     total = len(results)
 
-    print(f"Tests Passed: {passed}/{total}")
+    logger.info(f"Tests Passed: {passed}/{total}")
 
     for test_name, success in results:
         status_icon = "✅" if success else "❌"
-        print(f"{status_icon} {test_name}")
+        logger.info(f"{status_icon} {test_name}")
 
     if passed == total:
-        print(f"\n🎉 ALL TESTS PASSED! Tool integration is working perfectly.")
+        logger.info(f"\n🎉 ALL TESTS PASSED! Tool integration is working perfectly.")
     else:
-        print(
+        logger.info(
             f"\n⚠️ {total - passed} test(s) failed. Check the output above for details."
         )
 
