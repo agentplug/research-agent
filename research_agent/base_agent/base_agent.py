@@ -477,9 +477,9 @@ IMPORTANT: Use tools when they can provide better information than your training
             step: Step description
             details: Additional details
         """
-        print(f"🔍 AGENT STEP: {step}")
+        logger.info(f"🔍 AGENT STEP: {step}")
         if details:
-            print(f"   📝 Details: {details}")
+            logger.info(f"   📝 Details: {details}")
 
     def __str__(self) -> str:
         """String representation of the agent."""
