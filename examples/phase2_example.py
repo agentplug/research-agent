@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 
@@ -5,73 +6,77 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from research_agent import ResearchAgent
 
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 def main():
     """Demonstrate direct ResearchAgent usage."""
-    print("🚀 Phase 2 Example - Direct ResearchAgent Usage")
-    print("=" * 50)
+    logger.info("🚀 Phase 2 Example - Direct ResearchAgent Usage")
+    logger.info("=" * 50)
 
     # Initialize agent directly
     agent = ResearchAgent()
-    print("✅ ResearchAgent initialized directly")
+    logger.info("✅ ResearchAgent initialized directly")
 
     # # Test instant research
-    # print("\n📝 Testing Instant Research:")
+    # logger.info("\n📝 Testing Instant Research:")
     # result = agent.instant_research("What is Python?")
-    # print(f"Success: {result['success']}")
-    # print(f"Content: {result['data']['content'][:100]}...")
+    # logger.info(f"Success: {result['success']}")
+    # logger.info(f"Content: {result['data']['content'][:100]}...")
 
     # # Test quick research
-    # print("\n⚡ Testing Quick Research:")
+    # logger.info("\n⚡ Testing Quick Research:")
     # result = agent.quick_research("What is machine learning?")
-    # print(f"Success: {result['success']}")
-    # print(f"Rounds: {result['data']['research_rounds']}")
+    # logger.info(f"Success: {result['success']}")
+    # logger.info(f"Rounds: {result['data']['research_rounds']}")
 
     # # Test standard research
-    # print("\n🔍 Testing Standard Research:")
+    # logger.info("\n🔍 Testing Standard Research:")
     # result = agent.standard_research("What is artificial intelligence?")
-    # print(f"Success: {result['success']}")
-    # print(f"Rounds: {result['data']['research_rounds']}")
+    # logger.info(f"Success: {result['success']}")
+    # logger.info(f"Rounds: {result['data']['research_rounds']}")
 
     # Test deep research with interactive clarification
-    print("\n🧠 Testing Deep Research (Interactive Clarification):")
+    logger.info("\n🧠 Testing Deep Research (Interactive Clarification):")
     result = agent.deep_research("What are AI developments?")
-    print(f"\nFinal result - Success: {result['success']}")
-    print(f"Research rounds: {result['data'].get('research_rounds', 0)}")
+    logger.info(f"\nFinal result - Success: {result['success']}")
+    logger.info(f"Research rounds: {result['data'].get('research_rounds', 0)}")
 
     # Display the research content properly
     content = result["data"].get("content", "")
     if isinstance(content, dict):
-        print(f"\n📋 Research Summary:")
-        print(f"Total rounds: {content.get('total_rounds', 0)}")
-        print(f"Research summary: {content.get('research_summary', 'N/A')}")
+        logger.info(f"\n📋 Research Summary:")
+        logger.info(f"Total rounds: {content.get('total_rounds', 0)}")
+        logger.info(f"Research summary: {content.get('research_summary', 'N/A')}")
 
         # Display each round's content
         rounds = content.get("rounds", [])
         for i, round_data in enumerate(rounds, 1):
-            print(f"\n--- Round {i} ---")
-            print(f"Query: {round_data.get('query', 'N/A')}")
+            logger.info(f"\n--- Round {i} ---")
+            logger.info(f"Query: {round_data.get('query', 'N/A')}")
             round_content = round_data.get("content", "")
             if isinstance(round_content, str):
-                print(f"Content preview: {round_content[:200]}...")
+                logger.info(f"Content preview: {round_content[:200]}...")
             else:
-                print(f"Content: {round_content}")
+                logger.info(f"Content: {round_content}")
     elif isinstance(content, str):
-        print(f"\n📋 Research Content:")
-        print(f"Content preview: {content[:200]}...")
+        logger.info(f"\n📋 Research Content:")
+        logger.info(f"Content preview: {content[:200]}...")
     else:
-        print(f"\n📋 Research Content:")
-        print(f"Content type: {type(content)}")
-        print(f"Content: {content}")
+        logger.info(f"\n📋 Research Content:")
+        logger.info(f"Content type: {type(content)}")
+        logger.info(f"Content: {content}")
 
     # Test agent status
-    print("\n📊 Agent Status:")
+    logger.info("\n📊 Agent Status:")
     status = agent.get_agent_status()
-    print(f"Agent type: {status['data']['agent_type']}")
-    print(f"Available modes: {status['data']['available_modes']}")
-    print(f"Total researches: {status['data']['research_history']['total_researches']}")
+    logger.info(f"Agent type: {status['data']['agent_type']}")
+    logger.info(f"Available modes: {status['data']['available_modes']}")
+    logger.info(f"Total researches: {status['data']['research_history']['total_researches']}")
 
-    print("\n✅ All tests completed successfully!")
+    logger.info("\n✅ All tests completed successfully!")
 
 
 if __name__ == "__main__":
