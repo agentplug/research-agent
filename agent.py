@@ -6,10 +6,15 @@ Enhanced research agent with tool integration and multi-round analysis.
 """
 
 import json
+import logging
 import sys
 from typing import Any, Dict, Optional
 
 from research_agent import ResearchAgent
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -26,7 +31,9 @@ def main():
         tool_context = input_data.get("tool_context", {})
 
         # Create agent instance with tool context
+        logger.info(f"Creating agent with tool_context: {tool_context}")
         agent = ResearchAgent(tool_context=tool_context)
+        logger.info(f"Agent created successfully. Tool executor available: {agent.research_workflows.research_executor.tool_executor is not None}")
 
         # Execute requested method
         if method == "instant_research":
