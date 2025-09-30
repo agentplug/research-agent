@@ -5,6 +5,7 @@ This module handles the execution of research rounds, including first round
 and follow-up rounds with tool integration.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from ....utils.utils import get_current_timestamp
@@ -12,6 +13,9 @@ from ...tools.tool_executor import ToolExecutor
 from .prompt_builder import PromptBuilder
 from .research_modes import ResearchModes
 from .tool_analyzer import ToolAwareAnalyzer
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 
 class ResearchExecutor:
@@ -43,6 +47,7 @@ class ResearchExecutor:
         self.intention_generator = intention_generator
         self.available_tools = available_tools or []
         self.tool_descriptions = tool_descriptions or {}
+        self.logger = logger
 
         # Initialize components
         self.tool_executor = (
@@ -263,19 +268,24 @@ Please conduct follow-up research using the available tools to address the ident
             List of tool execution results
         """
         if not self.tool_executor:
+            self.logger.warning("No tool executor available")
             return []
 
         try:
             # Extract tool calls from response
             tool_calls = self.tool_executor.extract_tool_calls(response)
+            self.logger.info(f"Extracted {len(tool_calls)} tool calls from response")
 
             if not tool_calls:
+                self.logger.info("No tool calls found in response")
                 return []
 
             # Execute tool calls
             tool_results = []
-            for tool_call in tool_calls:
+            for i, tool_call in enumerate(tool_calls):
+                self.logger.info(f"Executing tool call {i+1}: {tool_call}")
                 result = self.tool_executor.execute_tool(tool_call)
+                self.logger.info(f"Tool execution result {i+1}: success={result.get('success', False)}")
                 tool_results.append(result)
 
             # Track URLs from tool results for future exclusion
@@ -285,6 +295,7 @@ Please conduct follow-up research using the available tools to address the ident
 
         except Exception as e:
             # Log error but continue
+            self.logger.error(f"Error in _extract_and_execute_tools: {str(e)}")
             return []
 
     def _extract_and_track_urls(self, tool_results: List[Dict[str, Any]]) -> None:
