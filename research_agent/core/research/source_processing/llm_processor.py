@@ -5,10 +5,13 @@ This module handles the LLM-based analysis of source content to determine
 relevance and extract meaningful information.
 """
 
+import logging
 from datetime import date
 from typing import Any, Dict, Optional
 
 from ....utils.utils import get_current_timestamp
+
+logger = logging.getLogger(__name__)
 
 
 class LLMProcessor:
@@ -53,14 +56,21 @@ class LLMProcessor:
 
         try:
             # Process this individual source
+            logger.info(f"Processing source: {title[:100]}...")
+            logger.info(f"Content length: {len(content)} characters")
+            logger.info(f"Query: {current_query}")
+            
             source_analysis = self.llm_service.generate(
                 input_data=f"Source: {title}\nContent: {content}\nQuestion: {current_query}",
                 system_prompt=system_prompt,
                 temperature=0.0,
             )
+            
+            logger.info(f"LLM analysis result: {source_analysis[:200]}...")
 
             # Check if source is relevant
             if "NOT_RELEVANT" in source_analysis.upper():
+                logger.info(f"Source marked as NOT_RELEVANT: {title}")
                 return None
 
             return {
