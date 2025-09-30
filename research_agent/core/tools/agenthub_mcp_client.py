@@ -152,21 +152,29 @@ class AgentHubMCPClient:
             )
 
         try:
+            self.logger.info(f"Attempting MCP tool call: {tool_name} with args: {arguments}")
+            self.logger.info(f"Using SSE URL: {self.sse_url}")
+            
             async with sse_client(url=self.sse_url) as streams:
                 async with ClientSession(*streams) as session:
                     await session.initialize()
+                    self.logger.info("MCP session initialized successfully")
 
                     # Call the tool
                     result = await session.call_tool(tool_name, arguments=arguments)
+                    self.logger.info(f"MCP tool call successful, content length: {len(result.content[0].text) if result.content else 0}")
 
                     # Extract content from result
                     if result.content and len(result.content) > 0:
                         content = result.content[0].text
                         try:
                             # Try to parse as JSON
-                            return json.loads(content)
+                            parsed_result = json.loads(content)
+                            self.logger.info(f"Parsed JSON result with keys: {list(parsed_result.keys()) if isinstance(parsed_result, dict) else 'Not a dict'}")
+                            return parsed_result
                         except json.JSONDecodeError:
                             # Return as text if not JSON
+                            self.logger.info("Result is not JSON, returning as text")
                             return {
                                 "type": "mcp_result",
                                 "tool_name": tool_name,
@@ -174,6 +182,7 @@ class AgentHubMCPClient:
                                 "source": "mcp_server",
                             }
                     else:
+                        self.logger.warning("No content returned from MCP tool")
                         return {
                             "type": "mcp_result",
                             "tool_name": tool_name,
@@ -249,11 +258,13 @@ class AgentHubMCPClient:
         try:
             # Try to execute via MCP first
             if MCP_LIBRARIES_AVAILABLE:
+                self.logger.info(f"MCP libraries available, attempting MCP call for {tool_name}")
                 try:
                     # Run the async MCP call
                     result = asyncio.run(
                         self._call_mcp_tool_async(tool_name, arguments)
                     )
+                    self.logger.info(f"MCP call successful, result type: {type(result)}")
 
                     # Log execution
                     execution_record = {
@@ -280,10 +291,21 @@ class AgentHubMCPClient:
                         f"MCP execution failed: {str(mcp_error)}, trying HTTP fallback"
                     )
                     # Try HTTP fallback
-                    result = self._call_mcp_tool_http(tool_name, arguments)
+                    try:
+                        result = self._call_mcp_tool_http(tool_name, arguments)
+                        self.logger.info(f"HTTP fallback successful, result type: {type(result)}")
+                    except Exception as http_error:
+                        self.logger.warning(f"HTTP fallback also failed: {str(http_error)}, falling back to simulation")
+                        result = self._simulate_tool_execution(tool_name, arguments)
             else:
+                self.logger.warning("MCP libraries not available, trying HTTP fallback")
                 # Try HTTP fallback if MCP libraries not available
-                result = self._call_mcp_tool_http(tool_name, arguments)
+                try:
+                    result = self._call_mcp_tool_http(tool_name, arguments)
+                    self.logger.info(f"HTTP fallback successful, result type: {type(result)}")
+                except Exception as http_error:
+                    self.logger.warning(f"HTTP fallback failed: {str(http_error)}, falling back to simulation")
+                    result = self._simulate_tool_execution(tool_name, arguments)
 
             # Log execution
             execution_record = {
