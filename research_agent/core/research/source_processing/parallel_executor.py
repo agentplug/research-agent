@@ -5,9 +5,13 @@ This module handles the parallel execution of source processing tasks
 using ThreadPoolExecutor for improved performance.
 """
 
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, List
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 
 class ParallelExecutor:
@@ -45,7 +49,7 @@ class ParallelExecutor:
         processed_results = []
         start_time = time.time()
 
-        print(
+        logger.info(
             f"🔄 Processing {len(tasks)} {task_name}s in parallel (max {self.max_workers} workers)..."
         )
 
@@ -63,18 +67,18 @@ class ParallelExecutor:
                     if result:  # Only add non-None results
                         processed_results.append(result)
                     completed_count += 1
-                    print(f"✅ Completed {completed_count}/{len(tasks)} {task_name}s")
+                    logger.info(f"✅ Completed {completed_count}/{len(tasks)} {task_name}s")
                 except Exception as e:
                     # Log error but continue processing other tasks
                     task = future_to_task[future]
-                    print(
+                    logger.error(
                         f"❌ Error processing {task_name} {task.get('tool_name', 'unknown')}: {e}"
                     )
                     completed_count += 1
 
         end_time = time.time()
         processing_time = end_time - start_time
-        print(
+        logger.info(
             f"⚡ Parallel processing completed in {processing_time:.2f}s ({len(processed_results)} {task_name}s processed)"
         )
 
@@ -105,7 +109,7 @@ class ParallelExecutor:
         processed_results = []
         start_time = time.time()
 
-        print(
+        logger.info(
             f"🔄 Processing {len(tasks)} {task_name}s in parallel (max {self.max_workers} workers)..."
         )
 
@@ -128,21 +132,21 @@ class ParallelExecutor:
                     if progress_callback:
                         progress_callback(completed_count, len(tasks))
                     else:
-                        print(
+                        logger.info(
                             f"✅ Completed {completed_count}/{len(tasks)} {task_name}s"
                         )
 
                 except Exception as e:
                     # Log error but continue processing other tasks
                     task = future_to_task[future]
-                    print(
+                    logger.error(
                         f"❌ Error processing {task_name} {task.get('tool_name', 'unknown')}: {e}"
                     )
                     completed_count += 1
 
         end_time = time.time()
         processing_time = end_time - start_time
-        print(
+        logger.info(
             f"⚡ Parallel processing completed in {processing_time:.2f}s ({len(processed_results)} {task_name}s processed)"
         )
 
