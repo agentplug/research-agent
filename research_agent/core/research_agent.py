@@ -113,7 +113,7 @@ class ResearchAgent(BaseAgent):
             # Step 1: Get clarification questions
             result = self.research_workflows.deep_research(query, "")
 
-            if result["data"].get("clarification_needed", False):
+            if result.get("clarification_needed", False):
                 # Step 2: Display questions and get user input
                 logger.info("\n" + "=" * 60)
                 logger.info("🧠 DEEP RESEARCH CLARIFICATION")
@@ -124,26 +124,15 @@ class ResearchAgent(BaseAgent):
                 )
                 logger.info("")
 
-                questions = result["data"].get("clarification_questions", "")
+                questions = result.get("questions", "")
                 logger.info(questions)
                 logger.info("")
 
-                # Get user input
-                user_clarification = input(
-                    "Please provide your clarification (you can answer some or all questions): "
-                ).strip()
-
-                if not user_clarification:
-                    user_clarification = "No specific clarifications provided. Please conduct comprehensive research."
-                    logger.info(
-                        "No clarification provided. Proceeding with comprehensive research..."
-                    )
-                else:
-                    # Generate a contextual response using LLM
-                    contextual_response = self._generate_contextual_response(
-                        query, user_clarification
-                    )
-                    logger.info(f"\n{contextual_response}")
+                # In non-interactive mode, use default clarification
+                user_clarification = "No specific clarifications provided. Please conduct comprehensive research covering all aspects of the query with detailed analysis and multiple perspectives."
+                logger.info(
+                    "No clarification provided. Proceeding with comprehensive research..."
+                )
 
         # Execute research with clarification
         result = self.research_workflows.deep_research(query, user_clarification)
