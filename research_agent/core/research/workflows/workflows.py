@@ -160,16 +160,16 @@ class ResearchWorkflows:
             # Handle clarification if needed
             if not user_clarification:
                 # Generate clarification questions
-                clarification_questions = (
-                    self.clarification_engine.generate_clarification_questions(query)
-                )
+                analysis = self.clarification_engine.analyze_query_for_clarification(query)
+                clarification_questions = self.clarification_engine.format_clarification_questions(analysis)
                 return self.response_formatter.format_clarification_response(
-                    clarification_questions
+                    [clarification_questions]
                 )
 
             # Generate intention from clarification
-            user_intention = self.intention_generator.generate_intention(
-                query, user_clarification
+            clarification_context = {"query": query, "clarification": user_clarification}
+            user_intention = self.intention_generator.generate_intention_paragraph(
+                query, clarification_context, user_clarification
             )
 
             # Execute first round with intention
