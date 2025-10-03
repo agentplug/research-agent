@@ -237,8 +237,8 @@ CRITICAL TOOL USAGE RULES:
 7. **For web_search tool**, always include "exclude_urls" parameter (empty array [] if no exclusions needed)
 8. **For web_search tool**, use exclude_urls to filter out irrelevant or low-quality domains when appropriate
 
-TOOL CALL FORMAT:
-```json
+TOOL CALL FORMAT (need to return json format):
+
 {{
     "tool_call": {{
         "tool_name": "chosen_tool_name",
@@ -248,7 +248,7 @@ TOOL CALL FORMAT:
         }}
     }}
 }}
-```
+
 
 EXAMPLES:
 - "What's the weather?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current weather today", "exclude_urls": []}}}}}}
