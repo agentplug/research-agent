@@ -22,7 +22,7 @@ classifiers = [
 keywords = ["research", "information-gathering", "ai-assistant", "analysis"]
 
 dependencies = [
-    "aisuite[openai]>=0.1.7",
+    "aisuite[openai,google]>=0.1.7",
     "httpx>=0.25.0",
     "python-dotenv>=1.0.0",
     "docstring-parser>=0.17.0",
