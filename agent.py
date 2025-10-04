@@ -21,6 +21,11 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("requests").setLevel(logging.WARNING)
 
+# Disable verbose source processing logging
+logging.getLogger("research_agent.core.research.source_processing.parallel_executor").setLevel(logging.WARNING)
+logging.getLogger("research_agent.core.research.source_processing.content_extractor").setLevel(logging.WARNING)
+logging.getLogger("research_agent.core.research.source_processing.llm_processor").setLevel(logging.WARNING)
+
 
 def main():
     """Main entry point for AgentHub integration."""
