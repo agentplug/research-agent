@@ -5,8 +5,11 @@ This module handles the synthesis of multiple source summaries into
 a coherent, comprehensive answer to research questions.
 """
 
+import logging
 from datetime import date
 from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 class SourceSynthesizer:
@@ -68,12 +71,24 @@ class SourceSynthesizer:
             Formatted source summaries text
         """
         source_summaries = []
-        for i, source in enumerate(processed_sources, 1):
+        # Limit to top 10 sources to prevent token overflow
+        max_sources = 10
+        sources_to_process = processed_sources[:max_sources]
+        
+        if len(processed_sources) > max_sources:
+            logger.info(f"Limiting synthesis to top {max_sources} sources (out of {len(processed_sources)} total)")
+        
+        for i, source in enumerate(sources_to_process, 1):
+            # Truncate summary to prevent token limit issues
+            summary = source['processed_summary']
+            if len(summary) > 1000:  # Limit each summary to 1000 characters
+                summary = summary[:1000] + "..."
+            
             source_summaries.append(
                 f"Source {i} ({source['source_type']}):\n"
                 f"Title: {source['title']}\n"
                 f"URL: {source['url']}\n"
-                f"Summary: {source['processed_summary']}\n"
+                f"Summary: {summary}\n"
             )
 
         return "\n".join(source_summaries)
