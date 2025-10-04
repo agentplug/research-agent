@@ -67,6 +67,8 @@ class LLMProcessor:
             # Check if source is relevant
             if "NOT_RELEVANT" in source_analysis.upper():
                 logger.info(f"Analysis result: Source not relevant - {title[:50]}...")
+                logger.info(f"Filtered source: {title} | URL: {url}")
+                logger.info(f"LLM reasoning: {source_analysis[:200]}...")
                 return None
             else:
                 logger.info(f"Analysis result: Source relevant - {title[:50]}...")
