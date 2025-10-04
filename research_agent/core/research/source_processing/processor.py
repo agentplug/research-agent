@@ -180,7 +180,7 @@ class SourceProcessor:
             return None
 
         # Process with LLM using generalized approach
-        return self.llm_processor.process_source_with_llm(
+        result = self.llm_processor.process_source_with_llm(
             tool_name=tool_name,
             content=extracted_fields["content"],
             title=extracted_fields["title"],
@@ -188,6 +188,14 @@ class SourceProcessor:
             original_query=original_query,
             follow_up_query=follow_up_query,
         )
+        
+        # Log result immediately when this source finishes processing
+        if result:
+            logger.info(f"✅ Processed source: {extracted_fields['title'][:50]}...")
+        else:
+            logger.info(f"❌ Filtered source: {extracted_fields['title'][:50]}...")
+            
+        return result
 
     def get_processing_statistics(
         self, tool_results: List[Dict[str, Any]]
