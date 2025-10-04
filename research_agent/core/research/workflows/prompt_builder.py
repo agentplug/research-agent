@@ -229,16 +229,16 @@ Available Tools:
 
 CRITICAL TOOL USAGE RULES:
 1. **ALWAYS use tools for research tasks** - Do not rely on training data alone
-2. **Generate tool calls in JSON format** for each research task
-3. **Use appropriate tools** based on the query type and available tools
-4. **For current information queries**, use tools to get up-to-date data
-5. **For calculations**, use calculation tools when available
-6. **For document analysis**, use document retrieval tools when available
-7. **For web_search tool**, always include "exclude_urls" parameter (empty array [] if no exclusions needed)
-8. **For web_search tool**, use exclude_urls to filter out irrelevant or low-quality domains when appropriate
+2. **STRICT JSON FORMAT REQUIRED** - You MUST output ONLY valid JSON for tool calls
+3. **NO MARKDOWN, NO TEXT, NO EXPLANATIONS** - Only pure JSON output
+4. **Use appropriate tools** based on the query type and available tools
+5. **For current information queries**, use tools to get up-to-date data
+6. **For calculations**, use calculation tools when available
+7. **For document analysis**, use document retrieval tools when available
+8. **For web_search tool**, always include "exclude_urls" parameter (empty array [] if no exclusions needed)
+9. **For web_search tool**, use exclude_urls to filter out irrelevant or low-quality domains when appropriate
 
-TOOL CALL FORMAT (need to return json format):
-
+MANDATORY JSON OUTPUT FORMAT:
 {{
     "tool_call": {{
         "tool_name": "chosen_tool_name",
@@ -249,6 +249,7 @@ TOOL CALL FORMAT (need to return json format):
     }}
 }}
 
+CRITICAL: Your response must be ONLY the JSON object above. No additional text, explanations, or markdown formatting.
 
 EXAMPLES:
 - "What's the weather?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current weather today", "exclude_urls": []}}}}}}

@@ -113,6 +113,7 @@ Please conduct research using the available tools and provide a comprehensive an
                 input_data=input_with_context,
                 system_prompt=system_prompt,
                 temperature=0.0,
+                return_json=True,
             )
 
             # Execute tool calls if present
@@ -182,6 +183,7 @@ Analyze the research progress and identify gaps. Generate a follow-up query to a
                 input_data=analysis_input,
                 system_prompt=analysis_prompt,
                 temperature=0.0,
+                return_json=True,
             )
 
             # Build system prompt for follow-up research with exclude URLs
@@ -206,6 +208,7 @@ Please conduct follow-up research using the available tools to address the ident
                 input_data=input_with_context,
                 system_prompt=system_prompt,
                 temperature=0.0,
+                return_json=True,
             )
 
             # Execute tool calls if present
