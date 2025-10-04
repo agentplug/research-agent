@@ -26,6 +26,9 @@ logging.getLogger("research_agent.core.research.source_processing.parallel_execu
 logging.getLogger("research_agent.core.research.source_processing.content_extractor").setLevel(logging.WARNING)
 logging.getLogger("research_agent.core.research.source_processing.llm_processor").setLevel(logging.WARNING)
 
+# Disable verbose LLM service logging
+logging.getLogger("research_agent.llm_service.model_detector").setLevel(logging.WARNING)
+
 
 def main():
     """Main entry point for AgentHub integration."""
