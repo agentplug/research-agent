@@ -179,12 +179,21 @@ Analyze the research progress and identify gaps. Generate a follow-up query to a
 
         try:
             # Generate follow-up query
-            follow_up_query = self.llm_service.generate(
+            follow_up_response = self.llm_service.generate(
                 input_data=analysis_input,
                 system_prompt=analysis_prompt,
                 temperature=0.0,
                 return_json=True,
             )
+            
+            # Parse the JSON response to extract the follow-up query
+            import json
+            try:
+                follow_up_data = json.loads(follow_up_response)
+                follow_up_query = follow_up_data.get("follow_up_query", follow_up_response)
+            except json.JSONDecodeError:
+                # If JSON parsing fails, use the raw response
+                follow_up_query = follow_up_response
 
             # Build system prompt for follow-up research with exclude URLs
             exclude_urls = self.source_tracker.get_exclude_urls("urls")

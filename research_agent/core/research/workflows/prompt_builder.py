@@ -276,7 +276,17 @@ When generating follow-up queries, consider using available tools to:
 5. **Perform calculations** if needed
 6. **Analyze documents** if relevant
 
-Generate follow-up queries that can be effectively answered using the available tools. Respond with a clear, focused query in JSON format."""
+Generate follow-up queries that can be effectively answered using the available tools. 
+
+CRITICAL: You must respond with ONLY valid JSON format. No additional text, explanations, or markdown formatting. The response must be parseable JSON.
+
+Required JSON format:
+{
+  "analysis": "Your analysis of the research gaps and missing information",
+  "follow_up_query": "The specific follow-up query to address the gaps"
+}
+
+CRITICAL: Your response must be ONLY the JSON object above. No additional text, explanations, or markdown formatting. You must respond with valid JSON format only."""
 
     def build_research_summary(self, previous_results: List[Dict[str, Any]]) -> str:
         """
