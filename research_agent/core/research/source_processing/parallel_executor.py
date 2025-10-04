@@ -67,8 +67,15 @@ class ParallelExecutor:
                     result = future.result()
                     if result:  # Only add non-None results
                         processed_results.append(result)
+                        # Log successful source processing immediately
+                        if 'title' in result:
+                            logger.info(f"✅ Processed source: {result['title'][:50]}...")
                     else:
                         filtered_count += 1
+                        # Log filtered source immediately
+                        task = future_to_task[future]
+                        if 'data' in task and 'title' in task['data']:
+                            logger.info(f"❌ Filtered source: {task['data']['title'][:50]}...")
                     completed_count += 1
                     logger.info(f"Processing progress: {completed_count}/{len(tasks)} {task_name}s completed")
                 except Exception as e:
