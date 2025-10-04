@@ -61,11 +61,14 @@ class ParallelExecutor:
 
             # Collect results as they complete
             completed_count = 0
+            filtered_count = 0
             for future in as_completed(future_to_task):
                 try:
                     result = future.result()
                     if result:  # Only add non-None results
                         processed_results.append(result)
+                    else:
+                        filtered_count += 1
                     completed_count += 1
                     logger.info(f"Processing progress: {completed_count}/{len(tasks)} {task_name}s completed")
                 except Exception as e:
@@ -81,6 +84,8 @@ class ParallelExecutor:
         logger.info(
             f"Processing result: Completed {len(processed_results)} {task_name}s in {processing_time:.2f}s"
         )
+        if filtered_count > 0:
+            logger.info(f"Filtered out {filtered_count} irrelevant {task_name}s")
 
         return processed_results
 
