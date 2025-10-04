@@ -27,7 +27,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 # Disable verbose source processing logging
 logging.getLogger("research_agent.core.research.source_processing.parallel_executor").setLevel(logging.WARNING)
 logging.getLogger("research_agent.core.research.source_processing.content_extractor").setLevel(logging.WARNING)
-logging.getLogger("research_agent.core.research.source_processing.llm_processor").setLevel(logging.WARNING)
+# Keep llm_processor logging enabled to see source analysis
 
 # Disable verbose LLM service logging
 logging.getLogger("research_agent.llm_service.model_detector").setLevel(logging.WARNING)
