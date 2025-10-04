@@ -12,8 +12,11 @@ from typing import Any, Dict, Optional
 
 from research_agent import ResearchAgent
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# Set up logging with cleaner format
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s:%(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Disable verbose HTTP request logging
@@ -28,6 +31,10 @@ logging.getLogger("research_agent.core.research.source_processing.llm_processor"
 
 # Disable verbose LLM service logging
 logging.getLogger("research_agent.llm_service.model_detector").setLevel(logging.WARNING)
+
+# Disable verbose research workflow logging
+logging.getLogger("research_agent.core.research.workflows.research_executor").setLevel(logging.WARNING)
+logging.getLogger("research_agent.core.tools.agenthub_mcp_client").setLevel(logging.WARNING)
 
 
 def main():
