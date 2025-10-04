@@ -5,6 +5,7 @@ This module coordinates the different processing components to handle
 tool results in a generalized, extensible way.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from .content_extractor import ContentExtractor
@@ -12,6 +13,8 @@ from .llm_processor import LLMProcessor
 from .parallel_executor import ParallelExecutor
 from .strategy_detector import StrategyDetector
 from .synthesizer import SourceSynthesizer
+
+logger = logging.getLogger(__name__)
 
 
 class SourceProcessor:
@@ -64,6 +67,7 @@ class SourceProcessor:
         )
 
         # Process sources in parallel
+        logger.info(f"Starting parallel processing of {len(sources_to_process)} sources with {self.parallel_executor.max_workers} workers")
         return self.parallel_executor.execute_parallel(
             tasks=sources_to_process,
             processor_func=self._process_single_source,
