@@ -202,11 +202,20 @@ class ToolExecutor:
             # Use MCP for real tool execution if available
             if self.use_mcp and self.mcp_executor:
                 result = self.mcp_executor.execute_tool(tool_call)
-                self.logger.info(f"MCP tool execution result: {result}")
-                if isinstance(result, dict):
-                    self.logger.info(f"MCP result keys: {list(result.keys())}")
+                if isinstance(result, dict) and result.get('success'):
+                    tool_name = result.get('tool_name', 'unknown')
+                    self.logger.info(f"✅ {tool_name} tool executed successfully")
+                    
+                    # Log meaningful information about the result
                     if 'result' in result and isinstance(result['result'], dict):
-                        self.logger.info(f"MCP inner result keys: {list(result['result'].keys())}")
+                        inner_result = result['result']
+                        if 'results' in inner_result:
+                            results_count = len(inner_result['results']) if isinstance(inner_result['results'], list) else 0
+                            self.logger.info(f"📊 Found {results_count} search results")
+                        if 'rewritten_query' in inner_result:
+                            self.logger.info(f"🔍 Query rewritten: {inner_result['rewritten_query'][:100]}...")
+                else:
+                    self.logger.warning(f"❌ Tool execution failed: {result}")
                 self.execution_history.append(result)
                 return result
             else:

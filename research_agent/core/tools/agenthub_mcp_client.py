@@ -170,7 +170,7 @@ class AgentHubMCPClient:
                         try:
                             # Try to parse as JSON
                             parsed_result = json.loads(content)
-                            self.logger.info(f"Parsed JSON result with keys: {list(parsed_result.keys()) if isinstance(parsed_result, dict) else 'Not a dict'}")
+                            self.logger.info(f"📄 Received structured data from MCP server")
                             return parsed_result
                         except json.JSONDecodeError:
                             # Return as text if not JSON
