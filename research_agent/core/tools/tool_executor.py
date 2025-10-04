@@ -201,9 +201,10 @@ class ToolExecutor:
         try:
             # Use MCP for real tool execution if available
             if self.use_mcp and self.mcp_executor:
-                result = self.mcp_executor.execute_tool(tool_call)
-                tool_name = result.get('tool_name', 'unknown') if isinstance(result, dict) else 'unknown'
+                tool_name = tool_call.get('tool_name', 'unknown')
                 self.logger.info(f"Calling {tool_name} tool")
+                
+                result = self.mcp_executor.execute_tool(tool_call)
                 
                 if isinstance(result, dict) and result.get('success'):
                     # Log the result details
