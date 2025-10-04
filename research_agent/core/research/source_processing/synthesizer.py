@@ -79,16 +79,11 @@ class SourceSynthesizer:
             logger.info(f"Limiting synthesis to top {max_sources} sources (out of {len(processed_sources)} total)")
         
         for i, source in enumerate(sources_to_process, 1):
-            # Truncate summary to prevent token limit issues
-            summary = source['processed_summary']
-            if len(summary) > 1000:  # Limit each summary to 1000 characters
-                summary = summary[:1000] + "..."
-            
             source_summaries.append(
                 f"Source {i} ({source['source_type']}):\n"
                 f"Title: {source['title']}\n"
                 f"URL: {source['url']}\n"
-                f"Summary: {summary}\n"
+                f"Summary: {source['processed_summary']}\n"
             )
 
         return "\n".join(source_summaries)

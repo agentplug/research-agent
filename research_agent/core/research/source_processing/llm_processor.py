@@ -71,14 +71,19 @@ class LLMProcessor:
             else:
                 logger.info(f"Analysis result: Source relevant - {title[:50]}...")
 
+            # Ensure summary is concise (max 300 characters)
+            summary = source_analysis.strip()
+            if len(summary) > 300:
+                summary = summary[:300] + "..."
+            
             return {
                 "source_type": tool_name,
                 "title": title,
                 "url": url,
                 "original_content": content,
-                "processed_summary": source_analysis.strip(),
+                "processed_summary": summary,
                 "relevance_score": self._calculate_relevance_score(
-                    source_analysis, current_query
+                    summary, current_query
                 ),
                 "timestamp": get_current_timestamp(),
             }
@@ -129,13 +134,15 @@ RESEARCH QUESTION: {current_query}
 INSTRUCTIONS:
 1. **Extract any information that could be relevant to the research question**
 2. **Only respond with "NOT_RELEVANT" if the source has absolutely no connection to the question**
-3. **If relevant, provide a concise summary (2-3 sentences) of the key information**
-4. **Include specific facts, data, or insights that could help answer the research question**
-5. **Maintain accuracy and cite the source**
+3. **If relevant, provide a BRIEF summary (maximum 2 sentences, under 200 characters)**
+4. **Include only the most important facts that directly answer the research question**
+5. **Be extremely concise - this summary will be used in a larger synthesis**
 
 RESPONSE FORMAT:
-If relevant: Provide a concise summary of the relevant information from this source.
+If relevant: Provide a very brief summary (max 2 sentences, under 200 characters) of the key relevant information.
 If not relevant: Respond with "NOT_RELEVANT"
+
+CRITICAL: Keep your response extremely short and focused. Only include the most essential information.
 
 Focus on: {current_query}"""
 
