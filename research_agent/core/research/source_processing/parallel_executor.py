@@ -50,7 +50,7 @@ class ParallelExecutor:
         start_time = time.time()
 
         logger.info(
-            f"🔄 Processing {len(tasks)} {task_name}s in parallel (max {self.max_workers} workers)..."
+            f"Processing {len(tasks)} {task_name}s in parallel"
         )
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -67,7 +67,7 @@ class ParallelExecutor:
                     if result:  # Only add non-None results
                         processed_results.append(result)
                     completed_count += 1
-                    logger.info(f"✅ Completed {completed_count}/{len(tasks)} {task_name}s")
+                    logger.info(f"Processing progress: {completed_count}/{len(tasks)} {task_name}s completed")
                 except Exception as e:
                     # Log error but continue processing other tasks
                     task = future_to_task[future]
@@ -79,7 +79,7 @@ class ParallelExecutor:
         end_time = time.time()
         processing_time = end_time - start_time
         logger.info(
-            f"⚡ Parallel processing completed in {processing_time:.2f}s ({len(processed_results)} {task_name}s processed)"
+            f"Processing result: Completed {len(processed_results)} {task_name}s in {processing_time:.2f}s"
         )
 
         return processed_results
@@ -110,7 +110,7 @@ class ParallelExecutor:
         start_time = time.time()
 
         logger.info(
-            f"🔄 Processing {len(tasks)} {task_name}s in parallel (max {self.max_workers} workers)..."
+            f"Processing {len(tasks)} {task_name}s in parallel"
         )
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -147,7 +147,7 @@ class ParallelExecutor:
         end_time = time.time()
         processing_time = end_time - start_time
         logger.info(
-            f"⚡ Parallel processing completed in {processing_time:.2f}s ({len(processed_results)} {task_name}s processed)"
+            f"Processing result: Completed {len(processed_results)} {task_name}s in {processing_time:.2f}s"
         )
 
         return processed_results

@@ -56,9 +56,7 @@ class LLMProcessor:
 
         try:
             # Process this individual source
-            logger.info(f"Processing source: {title[:100]}...")
-            logger.info(f"Content length: {len(content)} characters")
-            logger.info(f"Query: {current_query}")
+            logger.info(f"Analyzing source: {title[:100]}...")
             
             source_analysis = self.llm_service.generate(
                 input_data=f"Source: {title}\nContent: {content}\nQuestion: {current_query}",
@@ -66,12 +64,12 @@ class LLMProcessor:
                 temperature=0.0,
             )
             
-            logger.info(f"LLM analysis result: {source_analysis[:200]}...")
-
             # Check if source is relevant
             if "NOT_RELEVANT" in source_analysis.upper():
-                logger.info(f"Source marked as NOT_RELEVANT: {title}")
+                logger.info(f"Analysis result: Source not relevant - {title[:50]}...")
                 return None
+            else:
+                logger.info(f"Analysis result: Source relevant - {title[:50]}...")
 
             return {
                 "source_type": tool_name,
