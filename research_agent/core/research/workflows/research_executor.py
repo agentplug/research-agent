@@ -127,12 +127,19 @@ Please conduct research using the available tools and provide a comprehensive an
             else:
                 enhanced_content = response
 
-            return {
+            result = {
                 "round_number": 1,
                 "query": query,
                 "content": enhanced_content,
                 "timestamp": get_current_timestamp(),
             }
+            
+            # Log round completion separator
+            logger.info("=" * 100)
+            logger.info(f"✅ Round 1 completed")
+            logger.info("=" * 100)
+            
+            return result
 
         except Exception as e:
             return {
@@ -231,12 +238,19 @@ Please conduct follow-up research using the available tools to address the ident
             else:
                 enhanced_content = response
 
-            return {
+            result = {
                 "round_number": round_num,
                 "query": follow_up_query,
                 "content": enhanced_content,
                 "timestamp": get_current_timestamp(),
             }
+            
+            # Log round completion separator
+            logger.info("=" * 100)
+            logger.info(f"✅ Round {round_num} completed")
+            logger.info("=" * 100)
+            
+            return result
 
         except Exception as e:
             return {
