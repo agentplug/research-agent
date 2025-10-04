@@ -49,7 +49,7 @@ class SourceSynthesizer:
         
         # Log the summary parts being used for synthesis
         logger.info(f"Synthesizing {len(processed_sources)} source summaries")
-        logger.info(f"Summary parts: {sources_text[:500]}...")
+        logger.info(f"Summary parts: {sources_text[:2000]}...")
         
         synthesis_prompt = self._build_synthesis_prompt(current_query, sources_text)
 
@@ -82,10 +82,12 @@ class SourceSynthesizer:
         max_sources = 10
         sources_to_process = processed_sources[:max_sources]
         
+        logger.info(f"Preparing {len(sources_to_process)} sources for synthesis")
         if len(processed_sources) > max_sources:
             logger.info(f"Limiting synthesis to top {max_sources} sources (out of {len(processed_sources)} total)")
         
         for i, source in enumerate(sources_to_process, 1):
+            logger.info(f"Adding source {i}: {source['title'][:50]}...")
             source_summaries.append(
                 f"Source {i} ({source['source_type']}):\n"
                 f"Title: {source['title']}\n"
