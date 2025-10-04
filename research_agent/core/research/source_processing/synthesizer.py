@@ -46,6 +46,11 @@ class SourceSynthesizer:
 
         current_query = follow_up_query if follow_up_query else original_query
         sources_text = self._prepare_source_summaries(processed_sources)
+        
+        # Log the summary parts being used for synthesis
+        logger.info(f"Synthesizing {len(processed_sources)} source summaries")
+        logger.info(f"Summary parts: {sources_text[:500]}...")
+        
         synthesis_prompt = self._build_synthesis_prompt(current_query, sources_text)
 
         try:
@@ -55,7 +60,9 @@ class SourceSynthesizer:
                 temperature=0.0,
             )
 
-            return synthesis_result.strip()
+            result = synthesis_result.strip()
+            logger.info(f"Synthesis result: {result[:200]}...")
+            return result
 
         except Exception as e:
             return f"Error synthesizing sources: {str(e)}"
