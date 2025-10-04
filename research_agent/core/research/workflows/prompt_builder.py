@@ -249,7 +249,7 @@ MANDATORY JSON OUTPUT FORMAT:
     }}
 }}
 
-CRITICAL: Your response must be ONLY the JSON object above. No additional text, explanations, or markdown formatting. You must respond with valid JSON format only. The word "json" is required in your response format.
+CRITICAL: Your response must be ONLY the JSON object above. No additional text, explanations, or markdown formatting. You must respond with valid JSON format only. The word "json" is required in your response format. NO NEWLINES in JSON - output must be on a single line.
 
 EXAMPLES:
 - "What's the weather?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current weather today", "exclude_urls": []}}}}}}
@@ -286,7 +286,7 @@ Required JSON format:
   "follow_up_query": "The specific follow-up query to address the gaps"
 }}
 
-CRITICAL: Your response must be ONLY the JSON object above. No additional text, explanations, or markdown formatting. You must respond with valid JSON format only."""
+CRITICAL: Your response must be ONLY the JSON object above. No additional text, explanations, or markdown formatting. You must respond with valid JSON format only. NO NEWLINES in JSON - output must be on a single line."""
 
     def build_research_summary(self, previous_results: List[Dict[str, Any]]) -> str:
         """
