@@ -281,10 +281,10 @@ Generate follow-up queries that can be effectively answered using the available 
 CRITICAL: You must respond with ONLY valid JSON format. No additional text, explanations, or markdown formatting. The response must be parseable JSON.
 
 Required JSON format:
-{
+{{
   "analysis": "Your analysis of the research gaps and missing information",
   "follow_up_query": "The specific follow-up query to address the gaps"
-}
+}}
 
 CRITICAL: Your response must be ONLY the JSON object above. No additional text, explanations, or markdown formatting. You must respond with valid JSON format only."""
 
