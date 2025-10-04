@@ -170,11 +170,11 @@ class AgentHubMCPClient:
                         try:
                             # Try to parse as JSON
                             parsed_result = json.loads(content)
-                            self.logger.info(f"📄 Received structured data from MCP server")
+                            self.logger.info(f"MCP server result: Received structured data")
                             return parsed_result
                         except json.JSONDecodeError:
                             # Return as text if not JSON
-                            self.logger.info("Result is not JSON, returning as text")
+                            self.logger.info("MCP server result: Received text data")
                             return {
                                 "type": "mcp_result",
                                 "tool_name": tool_name,

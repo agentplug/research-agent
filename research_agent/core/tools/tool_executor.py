@@ -202,20 +202,26 @@ class ToolExecutor:
             # Use MCP for real tool execution if available
             if self.use_mcp and self.mcp_executor:
                 result = self.mcp_executor.execute_tool(tool_call)
+                tool_name = result.get('tool_name', 'unknown') if isinstance(result, dict) else 'unknown'
+                self.logger.info(f"Calling {tool_name} tool")
+                
                 if isinstance(result, dict) and result.get('success'):
-                    tool_name = result.get('tool_name', 'unknown')
-                    self.logger.info(f"✅ {tool_name} tool executed successfully")
-                    
-                    # Log meaningful information about the result
+                    # Log the result details
                     if 'result' in result and isinstance(result['result'], dict):
                         inner_result = result['result']
                         if 'results' in inner_result:
                             results_count = len(inner_result['results']) if isinstance(inner_result['results'], list) else 0
-                            self.logger.info(f"📊 Found {results_count} search results")
-                        if 'rewritten_query' in inner_result:
-                            self.logger.info(f"🔍 Query rewritten: {inner_result['rewritten_query'][:100]}...")
+                            self.logger.info(f"Tool result: Found {results_count} search results")
+                        elif 'content' in inner_result:
+                            self.logger.info(f"Tool result: {inner_result['content'][:100]}...")
+                        else:
+                            self.logger.info(f"Tool result: {inner_result}")
+                    else:
+                        self.logger.info(f"Tool result: {result.get('result', 'No result data')}")
+                    
+                    self.logger.info(f"Success called {tool_name} tool")
                 else:
-                    self.logger.warning(f"❌ Tool execution failed: {result}")
+                    self.logger.warning(f"Failed to call {tool_name} tool: {result}")
                 self.execution_history.append(result)
                 return result
             else:

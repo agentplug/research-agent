@@ -32,11 +32,13 @@ class ContentExtractor:
         content = data.get(content_field, "")
         snippet = data.get(snippet_field, "")
 
-        logger.info(f"📝 Extracting content from source data")
+        logger.info(f"Extracting content from source")
         if content:
-            logger.info(f"📄 Content found: {content[:100]}...")
-        if snippet and not content:
-            logger.info(f"📄 Using snippet as content: {snippet[:100]}...")
+            logger.info(f"Content result: {content[:100]}...")
+        elif snippet:
+            logger.info(f"Content result: Using snippet - {snippet[:100]}...")
+        else:
+            logger.info(f"Content result: No content found")
 
         # Use snippet if content is empty
         if not content or content == "No content":
