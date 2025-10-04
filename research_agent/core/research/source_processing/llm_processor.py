@@ -132,17 +132,17 @@ Content: {content}
 RESEARCH QUESTION: {current_query}
 
 INSTRUCTIONS:
-1. **Extract any information that could be relevant to the research question**
-2. **Only respond with "NOT_RELEVANT" if the source has absolutely no connection to the question**
-3. **If relevant, provide a BRIEF summary (maximum 2 sentences, under 200 characters)**
-4. **Include only the most important facts that directly answer the research question**
+1. **Be VERY LENIENT with relevance - include sources that have ANY connection to the research question**
+2. **Only respond with "NOT_RELEVANT" if the source is completely unrelated (e.g., cooking recipes when asking about visas)**
+3. **If there's ANY connection to the topic, provide a BRIEF summary (maximum 2 sentences, under 200 characters)**
+4. **Include any information that could be useful, even if indirectly related**
 5. **Be extremely concise - this summary will be used in a larger synthesis**
 
 RESPONSE FORMAT:
 If relevant: Provide a very brief summary (max 2 sentences, under 200 characters) of the key relevant information.
 If not relevant: Respond with "NOT_RELEVANT"
 
-CRITICAL: Keep your response extremely short and focused. Only include the most essential information.
+CRITICAL: Be VERY LENIENT with relevance. Include sources with ANY connection to the topic.
 
 Focus on: {current_query}"""
 
