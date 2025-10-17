@@ -147,7 +147,17 @@ Please provide your clarification to guide the research:"""
                     )
                     
                     if user_clarification and user_clarification != fallback_clarification:
-                        logger.info("Thank you. Using your clarification to guide deep research.")
+                        logger.info("Thank you. Processing your clarification...")
+                        
+                        # Generate interpretation using LLM
+                        interpretation = self._interpret_user_clarification(questions, user_clarification, query)
+                        logger.info(f"📋 Interpretation: {interpretation}")
+                        
+                        # Append interpretation to clarification for context in all research actions
+                        user_clarification = f"""{user_clarification}
+
+[Research Assistant's Interpretation]
+{interpretation}"""
                     else:
                         logger.info("No clarification provided. Proceeding with comprehensive research...")
                         user_clarification = fallback_clarification
@@ -161,6 +171,49 @@ Please provide your clarification to guide the research:"""
         result = self.research_workflows.deep_research(query, user_clarification)
         self._add_to_research_history("deep", query, result)
         return result
+
+    def _interpret_user_clarification(self, questions: str, user_answer: str, original_query: str) -> str:
+        """
+        Generate an interpretation of user's clarification response using LLM.
+        
+        Args:
+            questions: The clarification questions that were asked
+            user_answer: The user's answer to those questions
+            original_query: The original research query
+            
+        Returns:
+            LLM-generated interpretation of the user's intent
+        """
+        try:
+            prompt = f"""You are a research assistant interpreting a user's clarification response.
+
+Original Query: "{original_query}"
+
+Clarification Questions Asked:
+{questions}
+
+User's Answer:
+{user_answer}
+
+Based on the questions and the user's answer, generate a clear, concise interpretation that:
+1. Summarizes the user's key requirements and focus areas
+2. Identifies any specific constraints or preferences mentioned
+3. Clarifies the intended scope and depth of research
+4. Is written in 2-3 sentences
+
+Interpretation:"""
+
+            interpretation = self.llm_service.generate(
+                input_data=prompt,
+                system_prompt="You are an expert research assistant skilled at understanding user requirements and research objectives. Generate clear, actionable interpretations.",
+                temperature=0.3,
+            )
+
+            return interpretation.strip()
+
+        except Exception as e:
+            logger.warning(f"Could not generate interpretation: {e}")
+            return f"User provided clarification: {user_answer[:200]}..."
 
     def _generate_contextual_response(self, query: str, user_clarification: str) -> str:
         """Generate a contextual response using LLM based on user clarification."""
