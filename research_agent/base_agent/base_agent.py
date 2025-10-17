@@ -491,20 +491,21 @@ IMPORTANT: Use tools when they can provide better information than your training
         fallback_input: Optional[str] = None,
     ) -> str:
         """
-        Get user input via WebSocket connection.
+        Get user input via WebSocket connection or stdin based on environment.
 
-        This method sends a prompt to a WebSocket server and waits for user response.
-        Useful for getting clarifications or confirmations from users through a UI.
+        This method detects the execution environment:
+        - If running under AgentHub: Uses stdin to get user input via AgentHub's interface
+        - Otherwise: Connects to standalone WebSocket server on specified port
 
         Args:
-            prompt: The prompt/question to send to the server
-            host: WebSocket server host (default: localhost)
-            port: WebSocket server port (default: 38765)
-            timeout: Connection timeout in seconds (default: 30)
+            prompt: The prompt/question to send to the server or display
+            host: WebSocket server host (default: localhost) - only for standalone mode
+            port: WebSocket server port (default: 38765) - only for standalone mode  
+            timeout: Connection timeout in seconds (default: 30) - only for standalone mode
             fallback_input: Fallback value if connection fails (default: None)
 
         Returns:
-            User's response from the WebSocket server, or fallback_input if connection fails
+            User's response from the WebSocket server, stdin, or fallback_input
 
         Example:
             clarification = agent.get_user_input_via_websocket(
@@ -512,6 +513,38 @@ IMPORTANT: Use tools when they can provide better information than your training
                 fallback_input="No clarification provided"
             )
         """
+        import os
+        import sys
+        
+        # Check if running under AgentHub (detected by environment variable or parent process)
+        is_agenthub = os.getenv("AGENTHUB_EXECUTION") == "true" or os.getenv("AGENT_EXECUTION_MODE") == "agenthub"
+        
+        if is_agenthub:
+            # Running under AgentHub - use stdin for input
+            self.logger.info("🔄 Running under AgentHub - using stdin for clarification")
+            self.logger.info(f"📝 Prompt: {prompt[:200]}...")
+            
+            # Display prompt and wait for input via stdin
+            try:
+                # Use stdin with fallback
+                self.logger.info("⏳ Waiting for user input via stdin...")
+                user_input = input("Your clarification: ").strip()
+                
+                if user_input:
+                    self.logger.info(f"✅ Received user input: {user_input[:100]}...")
+                    return user_input
+                else:
+                    self.logger.info("No input provided, using fallback")
+                    return fallback_input if fallback_input else ""
+                    
+            except Exception as e:
+                self.logger.warning(f"Could not get input via stdin: {e}")
+                if fallback_input is not None:
+                    self.logger.info(f"Using fallback input: {fallback_input}")
+                    return fallback_input
+                raise
+        
+        # Standalone mode - connect to WebSocket server
         try:
             # Create socket connection
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
