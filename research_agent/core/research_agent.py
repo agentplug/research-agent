@@ -146,18 +146,15 @@ Please provide your clarification to guide the research:"""
                         fallback_input=fallback_clarification
                     )
                     
+                    # Store interpretation separately for use as context
+                    interpretation = ""
+                    
                     if user_clarification and user_clarification != fallback_clarification:
                         logger.info("Thank you. Processing your clarification...")
                         
                         # Generate interpretation using LLM
                         interpretation = self._interpret_user_clarification(questions, user_clarification, query)
                         logger.info(f"📋 Interpretation: {interpretation}")
-                        
-                        # Append interpretation to clarification for context in all research actions
-                        user_clarification = f"""{user_clarification}
-
-[Research Assistant's Interpretation]
-{interpretation}"""
                     else:
                         logger.info("No clarification provided. Proceeding with comprehensive research...")
                         user_clarification = fallback_clarification
@@ -167,8 +164,8 @@ Please provide your clarification to guide the research:"""
                     logger.info("Falling back to default clarification...")
                     user_clarification = fallback_clarification
 
-        # Execute research with clarification
-        result = self.research_workflows.deep_research(query, user_clarification)
+        # Execute research with clarification and interpretation
+        result = self.research_workflows.deep_research(query, user_clarification, interpretation)
         self._add_to_research_history("deep", query, result)
         return result
 
