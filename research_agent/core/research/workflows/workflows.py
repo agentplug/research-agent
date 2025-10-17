@@ -142,13 +142,14 @@ class ResearchWorkflows:
         except Exception as e:
             return self.response_formatter.format_error_response(str(e), "standard")
 
-    def deep_research(self, query: str, user_clarification: str = "") -> Dict[str, Any]:
+    def deep_research(self, query: str, user_clarification: str = "", interpretation: str = "") -> Dict[str, Any]:
         """
         Conduct deep research (4 rounds) with optional clarification.
 
         Args:
             query: Research query
             user_clarification: User clarification (if provided)
+            interpretation: LLM interpretation of user's clarification (if provided)
 
         Returns:
             Deep research result
@@ -166,11 +167,19 @@ class ResearchWorkflows:
                     [clarification_questions]
                 )
 
-            # Generate intention from clarification
-            clarification_context = {"query": query, "clarification": user_clarification}
+            # Generate intention from clarification (include interpretation in context)
+            clarification_context = {
+                "query": query, 
+                "clarification": user_clarification,
+                "interpretation": interpretation
+            }
             user_intention = self.intention_generator.generate_intention_paragraph(
                 query, clarification_context, user_clarification
             )
+            
+            # Store interpretation in research executor for use in all rounds
+            if interpretation:
+                self.research_executor.clarification_interpretation = interpretation
 
             # Execute first round with intention
             first_round = self.research_executor.execute_first_round(
