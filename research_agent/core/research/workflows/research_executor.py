@@ -67,6 +67,9 @@ class ResearchExecutor:
 
         # Initialize source tracker for URL deduplication
         self.source_tracker = SourceTracker()
+        
+        # Store user intention for use across all rounds
+        self.user_intention = ""
 
     def execute_first_round(
         self,
@@ -94,8 +97,9 @@ class ResearchExecutor:
             mode, enhanced_query, exclude_urls
         )
 
-        # Add user intention if provided
+        # Store and add user intention if provided
         if user_intention:
+            self.user_intention = user_intention
             system_prompt += f"\n\nUSER INTENTION: {user_intention}"
 
         # Build input with context
@@ -207,6 +211,10 @@ Analyze the research progress and identify gaps. Generate a follow-up query to a
             system_prompt = self.prompt_builder.build_tool_aware_system_prompt(
                 mode, follow_up_query, exclude_urls
             )
+
+            # Add user intention to follow-up rounds if available
+            if self.user_intention:
+                system_prompt += f"\n\nUSER INTENTION: {self.user_intention}"
 
             # Build input with context
             input_with_context = f"""
