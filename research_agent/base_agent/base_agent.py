@@ -530,13 +530,13 @@ IMPORTANT: Use tools when they can provide better information than your training
             self.logger.info("📝 Using stdin for user input")
             
             try:
-                # Print the prompt to stdout
-                print(f"\n{'='*60}")
-                print("🧠 USER INPUT REQUIRED")
-                print(f"{'='*60}")
-                print(prompt)
-                print(f"{'='*60}\n")
-                sys.stdout.flush()
+                # Print the prompt to stderr (not stdout - keep stdout clean for JSON output)
+                sys.stderr.write(f"\n{'='*60}\n")
+                sys.stderr.write("🧠 USER INPUT REQUIRED\n")
+                sys.stderr.write(f"{'='*60}\n")
+                sys.stderr.write(f"{prompt}\n")
+                sys.stderr.write(f"{'='*60}\n\n")
+                sys.stderr.flush()
                 
                 # Wait for input via stdin (blocks indefinitely until user responds)
                 self.logger.info("⏳ Waiting for user input via stdin...")
