@@ -487,7 +487,7 @@ IMPORTANT: Use tools when they can provide better information than your training
         prompt: str,
         host: str = "localhost",
         port: int = 38765,
-        timeout: int = 30,
+        timeout: int = 300,  # Increased default timeout to 5 minutes
         fallback_input: Optional[str] = None,
     ) -> str:
         """
@@ -500,8 +500,8 @@ IMPORTANT: Use tools when they can provide better information than your training
         Args:
             prompt: The prompt/question to send to the server or display
             host: WebSocket server host (default: localhost) - only for standalone mode
-            port: WebSocket server port (default: 38765) - only for standalone mode  
-            timeout: Connection timeout in seconds (default: 30) - only for standalone mode
+            port: WebSocket server port (default: 38765) - only for standalone mode
+            timeout: Connection timeout in seconds (default: 300) - only for standalone mode
             fallback_input: Fallback value if connection fails (default: None)
 
         Returns:
@@ -516,25 +516,36 @@ IMPORTANT: Use tools when they can provide better information than your training
         import os
         import sys
         
-        # Check if running under AgentHub (detected by environment variable or parent process)
-        is_agenthub = os.getenv("AGENTHUB_EXECUTION") == "true" or os.getenv("AGENT_EXECUTION_MODE") == "agenthub"
+        # Check if running under AgentHub (detected by environment variable or process)
+        is_agenthub = (
+            os.getenv("AGENTHUB_EXECUTION") == "true" or 
+            os.getenv("AGENT_EXECUTION_MODE") == "agenthub" or
+            "agenthub" in sys.modules
+        )
         
         if is_agenthub:
-            # Running under AgentHub - use stdin for input
+            # Running under AgentHub - use stdin for input with infinite wait
             self.logger.info("🔄 Running under AgentHub - using stdin for clarification")
-            self.logger.info(f"📝 Prompt: {prompt[:200]}...")
+            self.logger.info(f"📝 Prompt:\n{prompt}")
             
-            # Display prompt and wait for input via stdin
             try:
-                # Use stdin with fallback
-                self.logger.info("⏳ Waiting for user input via stdin...")
-                user_input = input("Your clarification: ").strip()
+                # Print the prompt to stdout so AgentHub can see it
+                print(f"\n{'='*60}")
+                print("🧠 USER INPUT REQUIRED")
+                print(f"{'='*60}")
+                print(prompt)
+                print(f"{'='*60}\n")
+                sys.stdout.flush()
+                
+                # Wait for input via stdin (blocks indefinitely until user responds)
+                self.logger.info("⏳ Waiting for user input via stdin (no timeout)...")
+                user_input = input().strip()
                 
                 if user_input:
                     self.logger.info(f"✅ Received user input: {user_input[:100]}...")
                     return user_input
                 else:
-                    self.logger.info("No input provided, using fallback")
+                    self.logger.info("Empty input provided, using fallback")
                     return fallback_input if fallback_input else ""
                     
             except Exception as e:
