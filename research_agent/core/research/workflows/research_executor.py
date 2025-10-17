@@ -180,6 +180,13 @@ Please conduct research using the available tools and provide a comprehensive an
 
         # Build analysis prompt
         analysis_prompt = self.prompt_builder.build_tool_aware_analysis_prompt(mode)
+        
+        # Add user intention and interpretation to analysis prompt if available
+        if self.user_intention:
+            analysis_prompt += f"\n\nUSER INTENTION: {self.user_intention}"
+            
+            if self.clarification_interpretation:
+                analysis_prompt += f"\n\nCLARIFICATION INTERPRETATION: {self.clarification_interpretation}"
 
         # Build research summary
         research_summary = self.prompt_builder.build_research_summary(previous_results)
