@@ -525,12 +525,26 @@ IMPORTANT: Use tools when they can provide better information than your training
             client_socket.send(json.dumps(message_data).encode("utf-8"))
             self.logger.info(f"Sent prompt to server: {prompt[:100]}...")
 
-            # Wait for response from server
-            response = client_socket.recv(4096).decode("utf-8")
-            data = json.loads(response)
+            # Wait for response from server (blocking until user responds or timeout)
+            self.logger.info(f"⏳ Waiting for user response via WebSocket (timeout: {timeout}s)...")
+            response_data = b""
+            
+            # Keep receiving until we get complete data
+            while True:
+                chunk = client_socket.recv(4096)
+                if not chunk:
+                    break
+                response_data += chunk
+                # Try to parse JSON - if successful, we have complete message
+                try:
+                    data = json.loads(response_data.decode("utf-8"))
+                    break
+                except json.JSONDecodeError:
+                    # Incomplete JSON, keep receiving
+                    continue
             
             user_input = data.get("message", data.get("response", ""))
-            self.logger.info(f"Received user input via WebSocket: {user_input[:100]}...")
+            self.logger.info(f"✅ Received user input via WebSocket: {user_input[:100]}...")
 
             client_socket.close()
             return user_input
