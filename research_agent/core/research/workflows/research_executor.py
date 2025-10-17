@@ -68,8 +68,9 @@ class ResearchExecutor:
         # Initialize source tracker for URL deduplication
         self.source_tracker = SourceTracker()
         
-        # Store user intention for use across all rounds
+        # Store user intention and interpretation for use across all rounds
         self.user_intention = ""
+        self.clarification_interpretation = ""
 
     def execute_first_round(
         self,
@@ -101,6 +102,10 @@ class ResearchExecutor:
         if user_intention:
             self.user_intention = user_intention
             system_prompt += f"\n\nUSER INTENTION: {user_intention}"
+            
+            # Add interpretation as additional context if available
+            if self.clarification_interpretation:
+                system_prompt += f"\n\nCLARIFICATION INTERPRETATION: {self.clarification_interpretation}"
 
         # Build input with context
         input_with_context = f"""
@@ -215,6 +220,10 @@ Analyze the research progress and identify gaps. Generate a follow-up query to a
             # Add user intention to follow-up rounds if available
             if self.user_intention:
                 system_prompt += f"\n\nUSER INTENTION: {self.user_intention}"
+                
+                # Add interpretation as additional context if available
+                if self.clarification_interpretation:
+                    system_prompt += f"\n\nCLARIFICATION INTERPRETATION: {self.clarification_interpretation}"
 
             # Build input with context
             input_with_context = f"""
