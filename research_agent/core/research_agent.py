@@ -128,11 +128,22 @@ class ResearchAgent(BaseAgent):
                 logger.info(questions)
                 logger.info("")
 
-                # In non-interactive mode, use default clarification
-                user_clarification = "No specific clarifications provided. Please conduct comprehensive research covering all aspects of the query with detailed analysis and multiple perspectives."
-                logger.info(
-                    "No clarification provided. Proceeding with comprehensive research..."
-                )
+                # Prompt user for clarification (interactive); fallback to default if unavailable
+                try:
+                    user_input = input("Your clarification (press Enter to skip): ").strip()
+                except Exception:
+                    user_input = ""
+
+                if user_input:
+                    user_clarification = user_input
+                    logger.info("Thank you. Using your clarification to guide deep research.")
+                else:
+                    user_clarification = (
+                        "No specific clarifications provided. Please conduct comprehensive research covering all aspects of the query with detailed analysis and multiple perspectives."
+                    )
+                    logger.info(
+                        "No clarification provided. Proceeding with comprehensive research..."
+                    )
 
         # Execute research with clarification
         result = self.research_workflows.deep_research(query, user_clarification)
