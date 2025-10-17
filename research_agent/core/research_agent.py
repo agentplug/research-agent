@@ -128,22 +128,34 @@ class ResearchAgent(BaseAgent):
                 logger.info(questions)
                 logger.info("")
 
-                # Prompt user for clarification (interactive); fallback to default if unavailable
-                try:
-                    user_input = input("Your clarification (press Enter to skip): ").strip()
-                except Exception:
-                    user_input = ""
+                # Prompt user for clarification via WebSocket (with fallback to default)
+                prompt = f"""Deep Research Clarification
 
-                if user_input:
-                    user_clarification = user_input
-                    logger.info("Thank you. Using your clarification to guide deep research.")
-                else:
-                    user_clarification = (
-                        "No specific clarifications provided. Please conduct comprehensive research covering all aspects of the query with detailed analysis and multiple perspectives."
+{questions}
+
+Please provide your clarification to guide the research:"""
+                
+                fallback_clarification = "No specific clarifications provided. Please conduct comprehensive research covering all aspects of the query with detailed analysis and multiple perspectives."
+                
+                try:
+                    user_clarification = self.get_user_input_via_websocket(
+                        prompt=prompt,
+                        host="localhost",
+                        port=38765,
+                        timeout=30,
+                        fallback_input=fallback_clarification
                     )
-                    logger.info(
-                        "No clarification provided. Proceeding with comprehensive research..."
-                    )
+                    
+                    if user_clarification and user_clarification != fallback_clarification:
+                        logger.info("Thank you. Using your clarification to guide deep research.")
+                    else:
+                        logger.info("No clarification provided. Proceeding with comprehensive research...")
+                        user_clarification = fallback_clarification
+                        
+                except Exception as e:
+                    logger.warning(f"Could not connect to WebSocket server: {e}")
+                    logger.info("Falling back to default clarification...")
+                    user_clarification = fallback_clarification
 
         # Execute research with clarification
         result = self.research_workflows.deep_research(query, user_clarification)

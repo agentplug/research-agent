@@ -7,6 +7,7 @@ for all agent implementations, including common capabilities and interfaces.
 
 import json
 import logging
+import socket
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -480,6 +481,73 @@ IMPORTANT: Use tools when they can provide better information than your training
         logger.info(f"🔍 AGENT STEP: {step}")
         if details:
             logger.info(f"   📝 Details: {details}")
+
+    def get_user_input_via_websocket(
+        self,
+        prompt: str,
+        host: str = "localhost",
+        port: int = 38765,
+        timeout: int = 30,
+        fallback_input: Optional[str] = None,
+    ) -> str:
+        """
+        Get user input via WebSocket connection.
+
+        This method sends a prompt to a WebSocket server and waits for user response.
+        Useful for getting clarifications or confirmations from users through a UI.
+
+        Args:
+            prompt: The prompt/question to send to the server
+            host: WebSocket server host (default: localhost)
+            port: WebSocket server port (default: 38765)
+            timeout: Connection timeout in seconds (default: 30)
+            fallback_input: Fallback value if connection fails (default: None)
+
+        Returns:
+            User's response from the WebSocket server, or fallback_input if connection fails
+
+        Example:
+            clarification = agent.get_user_input_via_websocket(
+                prompt="Please provide clarification for your research query",
+                fallback_input="No clarification provided"
+            )
+        """
+        try:
+            # Create socket connection
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.settimeout(timeout)
+            client_socket.connect((host, port))
+            
+            self.logger.info(f"Connected to WebSocket server at {host}:{port}")
+
+            # Send prompt to server
+            message_data = {"type": "prompt", "prompt": prompt, "session_id": self.session_id}
+            client_socket.send(json.dumps(message_data).encode("utf-8"))
+            self.logger.info(f"Sent prompt to server: {prompt[:100]}...")
+
+            # Wait for response from server
+            response = client_socket.recv(4096).decode("utf-8")
+            data = json.loads(response)
+            
+            user_input = data.get("message", data.get("response", ""))
+            self.logger.info(f"Received user input via WebSocket: {user_input[:100]}...")
+
+            client_socket.close()
+            return user_input
+
+        except socket.timeout:
+            self.logger.warning(f"WebSocket connection timeout after {timeout}s")
+            if fallback_input is not None:
+                self.logger.info(f"Using fallback input: {fallback_input}")
+                return fallback_input
+            raise
+
+        except Exception as e:
+            self.logger.error(f"Error getting user input via WebSocket: {e}")
+            if fallback_input is not None:
+                self.logger.info(f"Using fallback input: {fallback_input}")
+                return fallback_input
+            raise
 
     def __str__(self) -> str:
         """String representation of the agent."""
