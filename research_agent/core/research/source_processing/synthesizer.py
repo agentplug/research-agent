@@ -126,13 +126,33 @@ SOURCES TO SYNTHESIZE:
 INSTRUCTIONS:
 1. **Synthesize information from all relevant sources**
 2. **Provide a comprehensive answer that addresses the research question**
-3. **Cite specific sources when making claims**
+3. **Cite specific sources when making claims - ALL citations MUST be
+   formatted as clickable markdown links**
 4. **Ensure accuracy and avoid contradictions**
 5. **Structure the answer logically and clearly**
 6. **Include specific facts, data, and insights from the sources**
 
 RESPONSE FORMAT:
-Provide a comprehensive answer that synthesizes information from the sources. Include specific citations and ensure the answer directly addresses the research question.
+Provide a comprehensive answer that synthesizes information from the
+sources.
+
+CRITICAL CITATION REQUIREMENT:
+- **EVERY source citation MUST be formatted as a clickable markdown
+  link**
+- Use the format: `[Source Title](URL)` or `[Title](URL)`
+- When citing information, always include the markdown link
+  immediately after the claim
+- Example: "According to research [Source Title]
+  (https://example.com/article), the findings show..."
+- **DO NOT** use plain URLs or just mention source titles without
+  links
+- **DO NOT** use reference numbers or footnotes - use direct markdown
+  links
+- Every source mentioned in your answer must have its corresponding
+  markdown link
+
+Ensure the answer directly addresses the research question and all
+sources are properly cited with clickable markdown links.
 
 Focus on: {current_query}"""
 
