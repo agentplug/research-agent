@@ -7,6 +7,7 @@ Connects to MCP tool servers for real tool execution.
 
 import json
 import logging
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -16,18 +17,39 @@ import requests
 class MCPToolExecutor:
     """Handles real tool execution via MCP servers."""
 
-    def __init__(self, mcp_server_url: str = "http://127.0.0.1:8000"):
+    def __init__(self, mcp_server_url: str = None):
         """
         Initialize MCP tool executor.
 
         Args:
-            mcp_server_url: URL of the MCP tool server
+            mcp_server_url: URL of the MCP tool server. If not provided, will be constructed
+                          from environment variables AGENTHUB_MCP_HOST and AGENTHUB_MCP_PORT.
         """
+        if mcp_server_url is None:
+            mcp_server_url = self._construct_server_url()
+        
         self.mcp_server_url = mcp_server_url.rstrip("/")
         self.logger = logging.getLogger(__name__)
 
         # Tool execution results cache
         self.execution_history: List[Dict[str, Any]] = []
+
+    def _construct_server_url(self) -> str:
+        """
+        Construct MCP server URL from environment variables.
+
+        Returns:
+            MCP server URL based on environment configuration
+        """
+        mcp_host = os.getenv("AGENTHUB_MCP_HOST", "localhost")
+        
+        if mcp_host == "localhost":
+            # Use default localhost configuration
+            return "http://127.0.0.1:8000"
+        else:
+            # Use remote configuration
+            mcp_port = os.getenv("AGENTHUB_MCP_PORT", "8080")
+            return f"http://{mcp_host}:{mcp_port}"
 
     def execute_tool(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
         """

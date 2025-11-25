@@ -8,6 +8,7 @@ Supports both MCP (real) and simulation modes.
 
 import json
 import logging
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
@@ -27,7 +28,7 @@ class ToolExecutor:
         self,
         available_tools: List[str],
         tool_descriptions: Dict[str, str] = None,
-        mcp_server_url: str = "http://127.0.0.1:8000",
+        mcp_server_url: str = None,
         use_mcp: bool = True,
     ):
         """
@@ -36,12 +37,17 @@ class ToolExecutor:
         Args:
             available_tools: List of available tool names
             tool_descriptions: Dictionary of tool descriptions
-            mcp_server_url: URL of MCP tool server
+            mcp_server_url: URL of MCP tool server. If not provided, will be constructed
+                          from environment variables AGENTHUB_MCP_HOST and AGENTHUB_MCP_PORT.
             use_mcp: Whether to use MCP for real tool execution
         """
         self.available_tools = available_tools or []
         self.tool_descriptions = tool_descriptions or {}
         self.logger = logging.getLogger(__name__)
+        
+        # Construct MCP server URL if not provided
+        if mcp_server_url is None:
+            mcp_server_url = self._construct_server_url()
 
         # Tool execution results cache
         self.execution_history: List[Dict[str, Any]] = []
@@ -72,6 +78,23 @@ class ToolExecutor:
 
         if not self.use_mcp:
             self.logger.info("🔄 Using simulation mode for tool execution")
+
+    def _construct_server_url(self) -> str:
+        """
+        Construct MCP server URL from environment variables.
+
+        Returns:
+            MCP server URL based on environment configuration
+        """
+        mcp_host = os.getenv("AGENTHUB_MCP_HOST", "localhost")
+        
+        if mcp_host == "localhost":
+            # Use default localhost configuration
+            return "http://127.0.0.1:8000"
+        else:
+            # Use remote configuration
+            mcp_port = os.getenv("AGENTHUB_MCP_PORT", "8080")
+            return f"http://{mcp_host}:{mcp_port}"
 
     def extract_tool_calls(self, content: str) -> List[Dict[str, Any]]:
         """
