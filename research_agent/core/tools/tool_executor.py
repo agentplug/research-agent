@@ -92,9 +92,27 @@ class ToolExecutor:
             # Use default localhost configuration
             return "http://127.0.0.1:8000"
         else:
-            # Use remote configuration
-            mcp_port = os.getenv("AGENTHUB_MCP_PORT", "8080")
-            return f"http://{mcp_host}:{mcp_port}"
+            # Check if host already includes protocol
+            if mcp_host.startswith("http://") or mcp_host.startswith("https://"):
+                # Host already has protocol, use as-is (strip trailing slashes)
+                return mcp_host.rstrip("/")
+            else:
+                # No protocol specified, construct URL
+                # Check if port is specified in the host (e.g., "example.com:8080")
+                if ":" in mcp_host:
+                    # Port already in host, determine protocol from env or default to https
+                    protocol = os.getenv("AGENTHUB_MCP_PROTOCOL", "https")
+                    return f"{protocol}://{mcp_host}"
+                else:
+                    # No port in host, get from env or default
+                    mcp_port = os.getenv("AGENTHUB_MCP_PORT")
+                    protocol = os.getenv("AGENTHUB_MCP_PROTOCOL", "https")
+                    
+                    if mcp_port:
+                        return f"{protocol}://{mcp_host}:{mcp_port}"
+                    else:
+                        # No port specified, use protocol default (443 for https, 80 for http)
+                        return f"{protocol}://{mcp_host}"
 
     def extract_tool_calls(self, content: str) -> List[Dict[str, Any]]:
         """
