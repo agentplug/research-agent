@@ -78,8 +78,8 @@ class SourceSynthesizer:
             Formatted source summaries text
         """
         source_summaries = []
-        # Limit to top 10 sources to prevent token overflow
-        max_sources = 10
+        # Limit to top 20 sources (increased from 10 for more comprehensive answers)
+        max_sources = 20
         sources_to_process = processed_sources[:max_sources]
         
         logger.info(f"Preparing {len(sources_to_process)} sources for synthesis")
@@ -116,7 +116,7 @@ class SourceSynthesizer:
 
 CRITICAL: Today's date is {today} ({current_month} {current_year}).
 
-TASK: Synthesize the provided sources into a comprehensive, accurate answer to the research question.
+TASK: Synthesize the provided sources into a comprehensive, detailed answer to the research question.
 
 RESEARCH QUESTION: {current_query}
 
@@ -124,13 +124,14 @@ SOURCES TO SYNTHESIZE:
 {sources_text}
 
 INSTRUCTIONS:
-1. **Synthesize information from all relevant sources**
-2. **Provide a comprehensive answer that addresses the research question**
-3. **Cite specific sources when making claims - ALL citations MUST be
-   formatted as clickable markdown links**
-4. **Ensure accuracy and avoid contradictions**
-5. **Structure the answer logically and clearly**
-6. **Include specific facts, data, and insights from the sources**
+1. **USE INFORMATION FROM ALL PROVIDED SOURCES** - don't ignore any sources
+2. **Provide a COMPREHENSIVE and DETAILED answer** that fully addresses the research question
+3. **Cite specific sources when making claims - ALL citations MUST be formatted as clickable markdown links**
+4. **Include ALL relevant details, facts, dates, numbers, and context** from the sources
+5. **Structure the answer logically with clear sections if needed**
+6. **Be thorough - aim for a complete answer rather than a brief summary**
+7. **If sources have different perspectives, include them all**
+8. **Ensure accuracy and note any contradictions found in sources**
 
 RESPONSE FORMAT:
 Provide a comprehensive answer that synthesizes information from the

@@ -74,10 +74,10 @@ class LLMProcessor:
                 logger.info(f"Analysis result: Source relevant - {title[:50]}...")
                 logger.info(f"✅ Processed source: {title[:50]}...")
 
-            # Ensure summary is concise (max 300 characters)
+            # Ensure summary is concise (max 600 characters for better context)
             summary = source_analysis.strip()
-            if len(summary) > 300:
-                summary = summary[:300] + "..."
+            if len(summary) > 600:
+                summary = summary[:600] + "..."
             
             return {
                 "source_type": tool_name,
@@ -124,7 +124,7 @@ class LLMProcessor:
 
 CRITICAL: Today's date is {today} ({current_month} {current_year}).
 
-TASK: Analyze the provided source content and extract ONLY information that is directly relevant to the research question. If the source is not relevant, respond with "NOT_RELEVANT".
+TASK: Extract information from the provided source that relates to the research question.
 
 SOURCE INFORMATION:
 Tool: {tool_name}
@@ -135,17 +135,18 @@ Content: {content}
 RESEARCH QUESTION: {current_query}
 
 INSTRUCTIONS:
-1. **Be VERY LENIENT with relevance - include sources that have ANY connection to the research question**
-2. **Only respond with "NOT_RELEVANT" if the source is completely unrelated (e.g., cooking recipes when asking about visas)**
-3. **If there's ANY connection to the topic, provide a BRIEF summary (maximum 2 sentences, under 200 characters)**
-4. **Include any information that could be useful, even if indirectly related**
-5. **Be extremely concise - this summary will be used in a larger synthesis**
+1. **BE EXTREMELY LENIENT** - Include ANY source that has even a tangential connection to the topic
+2. **ONLY respond with "NOT_RELEVANT" if source is about a completely different topic** (e.g., cooking recipes when asking about physics)
+3. **For ALL other sources, provide a summary (2-4 sentences, 300-500 characters)** of relevant information
+4. **Include context and details** - don't be overly brief, provide enough information to be useful
+5. **Include background information, related concepts, and supporting details**
+6. **When in doubt, INCLUDE the source** - it's better to have extra information than miss something important
 
 RESPONSE FORMAT:
-If relevant: Provide a very brief summary (max 2 sentences, under 200 characters) of the key relevant information.
-If not relevant: Respond with "NOT_RELEVANT"
+- If relevant (99% of cases): Provide a clear summary (2-4 sentences, 300-500 characters) of the key information
+- If completely unrelated (1% of cases): Respond with "NOT_RELEVANT"
 
-CRITICAL: Be VERY LENIENT with relevance. Include sources with ANY connection to the topic.
+CRITICAL: Default to INCLUDING sources. Only filter out sources that are truly about a completely different subject matter.
 
 Focus on: {current_query}"""
 
@@ -163,7 +164,7 @@ Focus on: {current_query}"""
         if not summary or "NOT_RELEVANT" in summary.upper():
             return 0.0
 
-        # Simple relevance scoring based on keyword matching
+        # Improved relevance scoring with more generous baseline
         query_words = set(query.lower().split())
         summary_words = set(summary.lower().split())
 
@@ -172,7 +173,12 @@ Focus on: {current_query}"""
         total_query_words = len(query_words)
 
         if total_query_words == 0:
-            return 0.5  # Default score if no query words
+            return 0.7  # Higher default score if no query words
 
-        relevance_score = min(overlap / total_query_words, 1.0)
-        return max(relevance_score, 0.1)  # Minimum relevance score
+        # More generous scoring: even 1 keyword match gives 0.5+ score
+        base_score = overlap / total_query_words
+        # Boost the score to be more lenient
+        boosted_score = min(base_score * 1.5, 1.0)
+        
+        # Higher minimum relevance score - if source made it through LLM filter, it's relevant
+        return max(boosted_score, 0.6)  # Minimum relevance score increased from 0.1 to 0.6
