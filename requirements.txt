@@ -1,0 +1,12 @@
+# Core dependencies for research-agent
+# This file is generated from pyproject.toml for easier installation
+# Install with: pip install -r requirements.txt
+
+aisuite[all]>=0.1.7
+httpx>=0.25.0
+python-dotenv>=1.0.0
+docstring-parser>=0.17.0
+pydantic>=2.0.0
+loguru>=0.7.0
+mcp>=1.15.0
+
