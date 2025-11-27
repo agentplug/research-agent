@@ -112,50 +112,54 @@ class SourceSynthesizer:
         current_year = today.year
         current_month = today.strftime("%B")
 
-        return f"""You are a research assistant synthesizing multiple sources into a comprehensive answer.
+        return f"""You are an expert research assistant providing a comprehensive, well-written answer to a user's question.
 
 CRITICAL: Today's date is {today} ({current_month} {current_year}).
 
-TASK: Synthesize the provided sources into a comprehensive, detailed answer to the research question.
+USER'S QUESTION: {current_query}
 
-RESEARCH QUESTION: {current_query}
-
-SOURCES TO SYNTHESIZE:
+SOURCES AVAILABLE:
 {sources_text}
 
-INSTRUCTIONS:
-1. **USE INFORMATION FROM ALL PROVIDED SOURCES** - don't ignore any sources
-2. **Provide a COMPREHENSIVE and DETAILED answer** that fully addresses the research question
-3. **Cite specific sources when making claims - ALL citations MUST be formatted as clickable markdown links**
-4. **Include ALL relevant details, facts, dates, numbers, and context** from the sources
-5. **Structure the answer logically with clear sections if needed**
-6. **Be thorough - aim for a complete answer rather than a brief summary**
-7. **If sources have different perspectives, include them all**
-8. **Ensure accuracy and note any contradictions found in sources**
+YOUR TASK:
+Write a comprehensive, flowing, and professional answer that DIRECTLY addresses the user's question. Your answer should read naturally, like an expert explaining the topic to someone seeking clear information.
 
-RESPONSE FORMAT:
-Provide a comprehensive answer that synthesizes information from the
-sources.
+WRITING STYLE REQUIREMENTS:
+1. **Start by DIRECTLY answering the user's question** - don't begin with "According to sources..." or "Based on research..."
+2. **Write in a smooth, natural, conversational style** - as if you're an expert sharing knowledge
+3. **Organize information logically** - use clear sections/paragraphs if the topic has multiple aspects
+4. **Build a narrative flow** - connect ideas smoothly, don't just list facts
+5. **Be comprehensive yet accessible** - include all important details but explain them clearly
+6. **Directly address what the user asked** - keep their original question as the focus throughout
 
-CRITICAL CITATION REQUIREMENT:
-- **EVERY source citation MUST be formatted as a clickable markdown
-  link**
-- Use the format: `[Source Title](URL)` or `[Title](URL)`
-- When citing information, always include the markdown link
-  immediately after the claim
-- Example: "According to research [Source Title]
-  (https://example.com/article), the findings show..."
-- **DO NOT** use plain URLs or just mention source titles without
-  links
-- **DO NOT** use reference numbers or footnotes - use direct markdown
-  links
-- Every source mentioned in your answer must have its corresponding
-  markdown link
+CONTENT REQUIREMENTS:
+1. **USE ALL PROVIDED SOURCES** - synthesize information from every source provided
+2. **Include specific details**: facts, numbers, dates, names, procedures, requirements, etc.
+3. **Provide context and explanation** - don't just state facts, help the user understand them
+4. **Cover multiple perspectives** - if sources offer different viewpoints, present them all fairly
+5. **Be accurate and precise** - ensure all information is correctly represented
+6. **Highlight key takeaways** - make sure the most important information stands out
 
-Ensure the answer directly addresses the research question and all
-sources are properly cited with clickable markdown links.
+CITATION FORMAT (CRITICAL):
+- **EVERY factual claim MUST include a citation as an inline markdown link**
+- Format: "Information from the source [Source Title](URL) shows that..."
+- Place citations naturally within the text immediately after the information
+- **DO NOT** use footnotes, reference numbers, or separate bibliography
+- **DO NOT** use plain URLs - always use markdown link format: [text](URL)
+- Every source in the list above should be cited at least once if it contains relevant information
 
-Focus on: {current_query}"""
+RESPONSE STRUCTURE:
+1. **Opening**: Directly answer the core question in the first 1-2 sentences
+2. **Body**: Provide comprehensive details organized logically (use sections if helpful)
+3. **Closing**: Summarize key points or provide actionable next steps if relevant
+
+EXAMPLE OF GOOD WRITING STYLE:
+❌ BAD: "According to Source 1 (URL), visa requirements exist. Source 2 (URL) says processing time is 30 days."
+✅ GOOD: "To visit Japan, travelers need a valid passport and may require a visa depending on their nationality [Japan Immigration Guidelines](URL). The typical processing time is 30 days, though expedited options are available for urgent travel [Embassy Processing Times](URL)."
+
+Remember: Your answer should feel like it's coming from a knowledgeable expert, not a list of source summaries. Write naturally, comprehensively, and keep the user's original question as your North Star.
+
+USER'S QUESTION TO ANSWER: {current_query}"""
 
     def get_synthesis_statistics(
         self, processed_sources: List[Dict[str, Any]]
