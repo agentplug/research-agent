@@ -210,7 +210,7 @@ Interpretation:"""
 
         except Exception as e:
             logger.warning(f"Could not generate interpretation: {e}")
-            return f"User provided clarification: {user_answer[:200]}..."
+            return f"User provided clarification: {user_answer}"
 
     def _generate_contextual_response(self, query: str, user_clarification: str) -> str:
         """Generate a contextual response using LLM based on user clarification."""

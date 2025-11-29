@@ -306,7 +306,7 @@ CRITICAL: Your response must be ONLY the JSON object above. No additional text, 
             query = result.get("query", f"Query {i}")
             content = result.get("content", "No content")
             summary_parts.append(
-                f"Round {i} Query: {query}\nRound {i} Result: {content[:200]}..."
+                f"Round {i} Query: {query}\nRound {i} Result: {content}"
             )
 
         return "\n\n".join(summary_parts)

@@ -56,7 +56,7 @@ class LLMProcessor:
 
         try:
             # Process this individual source
-            logger.info(f"Analyzing source: {title[:100]}...")
+            logger.info(f"Analyzing source: {title}")
             
             source_analysis = self.llm_service.generate(
                 input_data=f"Source: {title}\nContent: {content}\nQuestion: {current_query}",
@@ -66,13 +66,13 @@ class LLMProcessor:
             
             # Check if source is relevant
             if "NOT_RELEVANT" in source_analysis.upper():
-                logger.info(f"Analysis result: Source not relevant - {title[:50]}...")
-                logger.info(f"❌ Filtered source: {title[:50]}...")
-                logger.info(f"LLM reasoning: {source_analysis[:200]}...")
+                logger.info(f"Analysis result: Source not relevant - {title}")
+                logger.info(f"❌ Filtered source: {title}")
+                logger.info(f"LLM reasoning: {source_analysis}")
                 return None
             else:
-                logger.info(f"Analysis result: Source relevant - {title[:50]}...")
-                logger.info(f"✅ Processed source: {title[:50]}...")
+                logger.info(f"Analysis result: Source relevant - {title}")
+                logger.info(f"✅ Processed source: {title}")
 
             # Ensure summary is concise (max 600 characters for better context)
             summary = source_analysis.strip()

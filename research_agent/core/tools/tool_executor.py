@@ -164,7 +164,7 @@ class ToolExecutor:
 
         except json.JSONDecodeError:
             self.logger.warning(
-                f"Failed to parse tool calls from content: {content[:100]}..."
+                f"Failed to parse tool calls from content: {content}"
             )
 
         return tool_calls
@@ -255,7 +255,7 @@ class ToolExecutor:
                             results_count = len(inner_result['results']) if isinstance(inner_result['results'], list) else 0
                             self.logger.info(f"Tool result: Found {results_count} search results")
                         elif 'content' in inner_result:
-                            self.logger.info(f"Tool result: {inner_result['content'][:100]}...")
+                            self.logger.info(f"Tool result: {inner_result['content']}")
                         else:
                             self.logger.info(f"Tool result: {inner_result}")
                     else:

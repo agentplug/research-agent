@@ -34,9 +34,9 @@ class ContentExtractor:
 
         logger.info(f"Extracting content from source")
         if content:
-            logger.info(f"Content result: {content[:100]}...")
+            logger.info(f"Content result: {content}")
         elif snippet:
-            logger.info(f"Content result: Using snippet - {snippet[:100]}...")
+            logger.info(f"Content result: Using snippet - {snippet}")
         else:
             logger.info(f"Content result: No content found")
 

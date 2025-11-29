@@ -146,7 +146,7 @@ class ModeSelector:
 
             if self.logging_enabled:
                 logger.info(
-                    f"🎯 Mode selected: {selected_mode} for query: '{query[:50]}...'"
+                    f"🎯 Mode selected: {selected_mode} for query: '{query}'"
                 )
 
             return result

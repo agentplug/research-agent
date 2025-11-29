@@ -218,7 +218,7 @@ Return your analysis as valid JSON:
             return json.loads(analysis_response)
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             self.logger.warning(
-                f"Failed to parse analysis response: {e}. Response: {analysis_response[:200]}..."
+                f"Failed to parse analysis response: {e}. Response: {analysis_response}"
             )
             return None
 

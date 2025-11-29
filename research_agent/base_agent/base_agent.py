@@ -543,7 +543,7 @@ IMPORTANT: Use tools when they can provide better information than your training
                 user_input = input().strip()
                 
                 if user_input:
-                    self.logger.info(f"✅ Received user input: {user_input[:100]}...")
+                    self.logger.info(f"✅ Received user input: {user_input}")
                     return user_input
                 else:
                     self.logger.info("Empty input provided, using fallback")
@@ -568,7 +568,7 @@ IMPORTANT: Use tools when they can provide better information than your training
             # Send prompt to server
             message_data = {"type": "prompt", "prompt": prompt, "session_id": self.session_id}
             client_socket.send(json.dumps(message_data).encode("utf-8"))
-            self.logger.info(f"Sent prompt to server: {prompt[:100]}...")
+            self.logger.info(f"Sent prompt to server: {prompt}")
 
             # Wait for response from server (blocking until user responds or timeout)
             self.logger.info(f"⏳ Waiting for user response via WebSocket (timeout: {timeout}s)...")
@@ -589,7 +589,7 @@ IMPORTANT: Use tools when they can provide better information than your training
                     continue
             
             user_input = data.get("message", data.get("response", ""))
-            self.logger.info(f"✅ Received user input via WebSocket: {user_input[:100]}...")
+            self.logger.info(f"✅ Received user input via WebSocket: {user_input}")
 
             client_socket.close()
             return user_input
