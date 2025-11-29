@@ -244,7 +244,8 @@ MANDATORY JSON OUTPUT FORMAT:
         "tool_name": "chosen_tool_name",
         "arguments": {{
             "param1": "value1",
-            "param2": "value2"
+            "param2": "value2",
+            "current_date": "YYYY-MM-DD" (optional: include only for time-sensitive queries like "current", "latest", "today")
         }}
     }}
 }}
@@ -253,9 +254,10 @@ CRITICAL: Your response must be ONLY the JSON object above. No additional text, 
 
 EXAMPLES:
 - "What's the weather?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current weather today", "exclude_urls": []}}}}}}
-- "Who is the president?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current US president", "exclude_urls": []}}}}}}
+- "Who is the president?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current US president", "exclude_urls": [], "current_date": "2025-11-29"}}}}}}
 - "Calculate 2+2" → {{"tool_call": {{"tool_name": "calculate", "arguments": {{"expression": "2+2"}}}}}}
-- "Search excluding specific sites" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "research topic", "exclude_urls": ["example.com", "spam-site.com"]}}}}}}
+- "Latest AI news" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "latest AI news", "exclude_urls": [], "current_date": "2025-11-29"}}}}}}
+- "Historical event in 1900" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "historical event 1900", "exclude_urls": []}}}}}}
 
 MANDATORY: Use tools for ALL research tasks. Do not provide answers without tool usage."""
 
