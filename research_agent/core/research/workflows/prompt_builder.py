@@ -68,7 +68,8 @@ INSTANT RESEARCH MODE:
 
 CRITICAL TOOL USAGE RULES:
 - ALWAYS use tools for research tasks
-- For "current" queries, search for {current_year} information
+- For time-sensitive topics (current events, latest news, who is president, etc.), include {current_year} in the search query
+- For historical facts or timeless information, omit the year
 - Cite specific sources from tool results
 - Provide accurate, up-to-date information"""
             )
@@ -86,7 +87,8 @@ QUICK RESEARCH MODE:
 
 CRITICAL TOOL USAGE RULES:
 - ALWAYS use tools for research tasks
-- For "current" queries, search for {current_year} information
+- For time-sensitive topics (current events, latest news, who is president, etc.), include {current_year} in the search query
+- For historical facts or timeless information, omit the year
 - Cite specific sources from tool results
 - Provide accurate, up-to-date information"""
             )
@@ -104,7 +106,8 @@ STANDARD RESEARCH MODE:
 
 CRITICAL TOOL USAGE RULES:
 - ALWAYS use tools for research tasks
-- For "current" queries, search for {current_year} information
+- For time-sensitive topics (current events, latest news, who is president, etc.), include {current_year} in the search query
+- For historical facts or timeless information, omit the year
 - Cite specific sources from tool results
 - Provide accurate, up-to-date information"""
             )
@@ -122,7 +125,8 @@ DEEP RESEARCH MODE:
 
 CRITICAL TOOL USAGE RULES:
 - ALWAYS use tools for research tasks
-- For "current" queries, search for {current_year} information
+- For time-sensitive topics (current events, latest news, who is president, etc.), include {current_year} in the search query
+- For historical facts or timeless information, omit the year
 - Cite specific sources from tool results
 - Provide accurate, up-to-date information"""
             )
@@ -203,6 +207,10 @@ DEEP MODE ANALYSIS:
         if not self.available_tools:
             return ""
 
+        # Get current year for temporal context examples
+        from datetime import date
+        current_year = date.today().year
+
         tool_descriptions = []
         for tool_name in self.available_tools:
             description = self.tool_descriptions.get(tool_name, f"Tool: {tool_name}")
@@ -244,20 +252,21 @@ MANDATORY JSON OUTPUT FORMAT:
         "tool_name": "chosen_tool_name",
         "arguments": {{
             "param1": "value1",
-            "param2": "value2",
-            "current_date": "YYYY-MM-DD" (optional: include only for time-sensitive queries like "current", "latest", "today")
+            "param2": "value2"
         }}
     }}
 }}
 
 CRITICAL: Your response must be ONLY the JSON object above. No additional text, explanations, or markdown formatting. You must respond with valid JSON format only. The word "json" is required in your response format. NO NEWLINES in JSON - output must be on a single line.
 
-EXAMPLES:
-- "What's the weather?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current weather today", "exclude_urls": []}}}}}}
-- "Who is the president?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "current US president", "exclude_urls": [], "current_date": "2025-11-29"}}}}}}
+EXAMPLES - Add temporal context (year) for time-sensitive queries:
+- "What's the weather?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "weather today", "exclude_urls": []}}}}}}
+- "Who is the current president?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "{current_year} US president", "exclude_urls": []}}}}}}
+- "Latest AI developments?" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "AI developments {current_year}", "exclude_urls": []}}}}}}
 - "Calculate 2+2" → {{"tool_call": {{"tool_name": "calculate", "arguments": {{"expression": "2+2"}}}}}}
-- "Latest AI news" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "latest AI news", "exclude_urls": [], "current_date": "2025-11-29"}}}}}}
-- "Historical event in 1900" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "historical event 1900", "exclude_urls": []}}}}}}
+- "Historical fact query" → {{"tool_call": {{"tool_name": "web_search", "arguments": {{"query": "World War II dates", "exclude_urls": []}}}}}}
+
+TEMPORAL CONTEXT GUIDANCE: Include the year ({current_year}) in queries for time-sensitive topics (current events, latest news, who is president, etc.) but NOT for historical facts or calculations.
 
 MANDATORY: Use tools for ALL research tasks. Do not provide answers without tool usage."""
 
